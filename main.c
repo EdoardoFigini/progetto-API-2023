@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define AGGIUNGI_STAZIONE   0
+#define DEMOLISCI_STAZIONE  1
+#define AGGIUNGI_AUTO       2
+#define ROTTAMA_AUTO        3
+#
 
 typedef struct stazione {
 	unsigned short int distanza;
