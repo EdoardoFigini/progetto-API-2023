@@ -1,4 +1,4 @@
 *.exe
 *.txt
 vscode
-*_try\
+.\*_try\
