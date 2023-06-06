@@ -1,4 +1,4 @@
 *.exe
 *.txt
-vscode
+.\.vscode\
 .\*_try\
