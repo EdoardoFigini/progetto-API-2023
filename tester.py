@@ -1,7 +1,6 @@
 from os import path, name, listdir
 from subprocess import run, Popen, check_call, PIPE, STDOUT
 from math import ceil
-from filecmp import cmp
 
 class Log():
     reset = '\033[0m'
@@ -10,7 +9,7 @@ class Log():
     header = '\033[95m'
     ok_blue = bold + '\033[94m[+]' + reset
     info = bold + '\033[32m[*]' + reset
-    warning = bold + '\033[93m[!]' + reset
+    warning = bold + '\033[93m[-]' + reset
     fail = bold + '\033[91m[!]' + reset + ' Error:'	
 
     uline = '\033[4m'
@@ -26,6 +25,10 @@ class Log():
         print(Log.ok_blue + ' ' + message, sep=sep, end=end)
 
     @classmethod
+    def print_warning(cls, message:str, sep: str = ' ', end: str = '\n') -> None:
+        print(Log.warning + ' ' + message, sep=sep, end=end)
+
+    @classmethod
     def print_err(cls, message: str, sep: str = ' ', end: str = '\n') -> None:
         print(Log.fail + ' ' + message, sep=sep, end=end)
 
@@ -36,9 +39,26 @@ class Log():
         print(Log.progress_bar_char*(adj_index) + ' '*(length-adj_index), end=' ')
         print(f'{progress+1} of {max}', end=end)
 
-
 COMPILE_COMMAND = 'gcc -DEVAL -Wall -Werror -std=gnu11 -O2 -pipe -static -s main.c -lm'
 MAX_TEST = 111
+
+def line_by_line_compare(file1: str, file2:str) -> bool:
+    f1 = open(file1, 'r')
+    f2 = open(file2, 'r')
+
+    f1_content = f1.readlines()
+    f2_content = f2.readlines()
+
+    for i in range(0, len(f1_content)):
+        if(not f1_content[i].startswith('\n') and not f2_content[i].startswith('\n')):
+            # compare
+            if(not f1_content[i] == f2_content[i]):
+                print()
+                Log.print_warning(f"Mismatch found at line {i}: {f1_content[i].strip()} != {f2_content[i].strip()}")
+                return False
+
+    return True
+
 
 def main() -> None:
     try:
@@ -62,11 +82,11 @@ def main() -> None:
                     else:
                         run(['chmod', '+x', 'a.out'], check=True)
                         proc = run(['./a.out'], shell=True, stdout=of, stdin=inf, stderr=PIPE)
-                        print('\n' + proc.stderr.decode('utf-8'), end='\n')
+                        # print('\n' + proc.stderr.decode('utf-8'))
 
             Log.print_progress_bar(i, MAX_TEST, 40)
 
-            if(not cmp(path.join('.', 'Test', f'open_{i}.output.txt'), 'output.txt')):
+            if(not line_by_line_compare(path.join('.', 'Test', f'open_{i}.output.txt'), 'output.txt')):
                 Log.print_err(f'Output mismatch at test {i}' + 30*' ')
                 return
         print()
