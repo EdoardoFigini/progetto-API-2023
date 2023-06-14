@@ -46,16 +46,19 @@ def line_by_line_compare(file1: str, file2:str) -> bool:
     f1 = open(file1, 'r')
     f2 = open(file2, 'r')
 
-    f1_content = f1.readlines()
-    f2_content = f2.readlines()
+    f1_content = [l for l in f1.readlines() if l!='\n']
+    f2_content = [l for l in f2.readlines() if l!='\n']
+
+    if(len(f1_content) != len(f2_content)):
+        print()
+        Log.print_warning('Length mismatch')
+        return False
 
     for i in range(0, len(f1_content)):
-        if(not f1_content[i].startswith('\n') and not f2_content[i].startswith('\n')):
-            # compare
-            if(not f1_content[i] == f2_content[i]):
-                print()
-                Log.print_warning(f"Mismatch found at line {i}: {f1_content[i].strip()} != {f2_content[i].strip()}")
-                return False
+        if(not f1_content[i] == f2_content[i]):
+            print()
+            Log.print_warning(f"Mismatch found at line {i}: {f1_content[i].strip()} != {f2_content[i].strip()}")
+            return False
 
     return True
 
