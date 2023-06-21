@@ -286,7 +286,7 @@ static int* directional_bellman_ford(graph_t* graph, int s, int to){
     int* p;
     int i, j;
     unsigned int* d;
-    unsigned int* a;
+    // unsigned int* a;
     struct int_list_node* l;
     struct int_list_node* x;
     struct int_list_node* y;
