@@ -6,7 +6,7 @@
 #define HASH_M          32
 #define HASH_A          6.179952383 
 #define NIL             -1
-#define DELETED         0
+#define DELETED         -2
 #define MAX_COMMAND     18
 #define INT_MAX         0xFFFFFFFF
 #define WHITE           1
@@ -63,48 +63,60 @@ static double decimal(double n){
     return n - (unsigned int)n;
 }
 
-static int hash(unsigned int k, int i){
+static int hash(size_t m, unsigned int k, int i){
     double integer;
-
-    return (int)(HASH_M * modf((k +i) * HASH_A, &integer));  
+    return (int)(m * modf((k +i) * HASH_A, &integer));  
 }
 
 static int hash_insert(hash_table_t t, unsigned int k){
     int j;
 
     for(int i=0; i<t.m; i++){
-        j = hash(k, i);
+        j = hash(t.m, k, i);
         if(t.table[j].stazione.dist == NIL || t.table[j].stazione.dist == DELETED){
             t.table[j].stazione.dist = k;
             t.table[j].stazione.cars = NULL;
             return j;
         }
     }
-    // fprintf(stderr, "No more space in Table\n");
-    return -1;
+    return NIL;
 }
 
-static void realloc_graph(graph_t** old, size_t dim){
-    graph_t* new;
+static int realloc_graph(graph_t* graph, size_t dim){
+    hash_table_t new;
     int j;
-    new = alloc_graph(dim);
-    for(int i=0; i<(*old)->array.m; i++){
-        if((*old)->array.table[i].stazione.dist != NIL && (*old)->array.table[i].stazione.dist != DELETED){
-            j = hash_insert(new->array, (*old)->array.table[i].stazione.dist);
-            new->array.table[j].head = (*old)->array.table[i].head;
-            new->array.table[j].stazione.cars = (*old)->array.table[i].stazione.cars;
+    
+    graph->v = 0;
+    new.m = dim;
+    new.table = (struct adj_list*)malloc(dim * sizeof(struct adj_list));
+    // memset(new.table, NIL, dim* sizeof(struct adj_list));
+    for(int i=0; i<new.m; i++){
+        new.table[i].stazione.dist = NIL;
+    }
+    if(new.table == NULL) return 1;
+
+    for(int i=0; i<graph->array.m; i++){
+        if(graph->array.table[i].stazione.dist != NIL && graph->array.table[i].stazione.dist != DELETED){
+            j = hash_insert(new, graph->array.table[i].stazione.dist);
+            (graph->v)++;
+            new.table[j].head = graph->array.table[i].head;
+            new.table[j].stazione.cars = graph->array.table[i].stazione.cars;
         }
     }
-    free(*old);
-    *old = new;
+    graph->array.m = new.m;
+    // fprintf(stderr, "%p\n", graph->array.table);
+    // debug_graph(graph, stderr);
+    free(graph->array.table);
+    graph->array.table = new.table;
+    return 0;
 }
 
-static int hash_search(hash_table_t t, int k){
+static int hash_search(hash_table_t t, unsigned int k){
     int j;
-    j = hash(k, 0);
+    j = hash(t.m, k, 0);
     for(int i=0; t.table[j].stazione.dist != NIL && i < t.m; i++){
         if(t.table[j].stazione.dist == k) return j;
-        j = hash(k, i);
+        j = hash(t.m, k, i);
     }
 
     return NIL;
@@ -153,10 +165,9 @@ static void int_list_insert(struct int_list_node** l, unsigned int k){
     return;
 }
 
-static struct int_list_node* inorder_list_insert(struct int_list_node** l, unsigned int k){
+static struct int_list_node* inorder_list_insert(struct int_list_node** l, unsigned int k){ // TODO: max_hep
     struct int_list_node* x;
     struct int_list_node* tmp;
-    // if(int_ordered_list_search(*l, k) != NULL) return NULL;
     x = (struct int_list_node*)malloc(sizeof(struct int_list_node));
     if(x != NULL){
         x->key = k;
@@ -240,8 +251,9 @@ static struct int_list_node* topological_sort(graph_t* g, int dir){
 }
 
 static int w(graph_t* g, int i, int j){
-   return g->array.table[j].stazione.dist - g->array.table[i].stazione.dist;
-   return g->array.table[j>i ? j : i].stazione.dist - g->array.table[j>i ? i: j].stazione.dist;
+    return g->array.table[j].stazione.dist;
+    return g->array.table[j].stazione.dist - g->array.table[i].stazione.dist;
+    return g->array.table[j>i ? j : i].stazione.dist - g->array.table[j>i ? i: j].stazione.dist;
 }
 
 static void relax(graph_t* g, int i, int j, unsigned int* d, int* p){
@@ -253,10 +265,28 @@ static void relax(graph_t* g, int i, int j, unsigned int* d, int* p){
     }
 }
 
+// static void insertion_sort(int *arr, int size)
+// {
+//     for (int i = 1; i < size; i++)
+//     {
+//         int j = i - 1;
+//         int key = arr[i];
+//         /* Move all elements greater than key to one position */
+//         while (j >= 0 && key < arr[j])
+//         {
+//             arr[j + 1] = arr[j];
+//             j = j - 1;
+//         }
+//         /* Find a correct position for key */
+//         arr[j + 1] = key;
+//     }
+// }
+
 static int* directional_bellman_ford(graph_t* graph, int s, int to){
     int* p;
     int i, j;
     unsigned int* d;
+    unsigned int* a;
     struct int_list_node* l;
     struct int_list_node* x;
     struct int_list_node* y;
@@ -270,33 +300,65 @@ static int* directional_bellman_ford(graph_t* graph, int s, int to){
     l = topological_sort(graph, to - s);
     if(l == NULL) return NULL;
     for(x = l; x!=NULL; x=x->next){
-        i = hash_search(graph->array, x->key);
-        for(y = graph->array.table[i].head; y!=NULL; y=y->next){
-            j = hash_search(graph->array, y->key);
-            relax(graph, i, j, d, p);
+        if((int)(x->key - s) * (to - s) >= 0){
+            i = hash_search(graph->array, x->key);
+            for(y = graph->array.table[i].head; y!=NULL; y=y->next){
+                if((int)(y->key - x->key) * (to - s) > 0){
+                    j = hash_search(graph->array, y->key);
+                    relax(graph, i, j, d, p);
+                }
+            }
         }
     }
 
-    // for(int i=0; i<graph->array.m; i++)
-    //     fprintf(stderr, "%d\n", p[i] != NIL ? graph->array.table[p[i]].stazione.dist : NIL);
+    // a = (unsigned int*)malloc(graph->v * sizeof(unsigned int));
+    // int h, k;
+    // for(h=0, k=0; h<graph->array.m; h++){
+    //     if(graph->array.table[h].stazione.dist != NIL && graph->array.table[h].stazione.dist != DELETED){
+    //         a[k] = graph->array.table[h].stazione.dist;
+    //         k++;
+    //     }
+    // }
+    // insertion_sort(a, graph->v);
+    // for(int k=0; k<graph->v; k++){
+    //     if((int)(a[k] - s) * (to - s) >= 0){
+    //         i = hash_search(graph->array, a[k]);
+    //         for(y=graph->array.table[i].head; y!=NULL; y=y->next){
+    //             if((int)(y->key - a[k]) * (to - s) > 0){
+    //                 j = hash_search(graph->array, y->key);
+    //                 relax(graph, i, j, d, p);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // for(int k=0; k<graph->array.m; k++)
+    //     fprintf(stderr, "%4d: %4d\n", graph->array.table[k].stazione.dist, d[k]);
+    // fprintf(stderr, "---------------------------------------------------------------\n"),
     free(d);
     return p;
 }
 
 static void aggiungi_stazione(graph_t* autostrada, unsigned int dist, unsigned int num){
-    int index;
+    int index, index2;
     unsigned int argn;
     struct adj_list* table;
     int diff;
-    
-    if(hash_search(autostrada->array, dist) != NIL){
+   
+    index2 = hash_search(autostrada->array, dist);
+    if(index2 != NIL && index2 != DELETED ){
         fprintf(stdout, "non aggiunta\n");
         return;
     }
 
     index = hash_insert(autostrada->array, dist);
     if(index == NIL){
-        realloc_graph(&autostrada, 2 * autostrada->array.m);
+        if(realloc_graph(autostrada, 2 * autostrada->array.m) != 0){
+            fprintf(stdout, "non aggiunta\n");
+            return;
+        }
+        index = hash_insert(autostrada->array, dist);
+        autostrada->array.table[index].stazione.cars = NULL;
     }
     table = autostrada->array.table;
     (autostrada->v)++;
@@ -344,9 +406,12 @@ static void aggiungi_auto(graph_t* autostrada, unsigned int stazione, unsigned i
     for(int i=0; i<autostrada->array.m; i++){
         if(table[i].stazione.dist != NIL && table[i].stazione.dist != DELETED && i != index){
             diff = abs(stazione - table[i].stazione.dist);
-            if( table[index].stazione.cars != NULL && table[index].stazione.cars->key >= diff &&
-                table[index].stazione.cars->next != NULL && table[index].stazione.cars->next->key < diff){
-                adj_list_insert(table+index, table[i].stazione.dist);
+            if( table[index].stazione.cars != NULL && table[index].stazione.cars->key >= diff){ 
+                if(table[index].stazione.cars->next == NULL){
+                    adj_list_insert(table+index, table[i].stazione.dist);
+                } else if(table[index].stazione.cars->next->key < diff) {
+                    adj_list_insert(table+index, table[i].stazione.dist);
+                }
             }
         }
     }
@@ -402,7 +467,7 @@ static void demolisci_stazione(graph_t* autostrada, unsigned int dist){
     return;
 }
 
-static int stampa_percorso(graph_t* autostrada, unsigned int* p, unsigned int src, unsigned int k){
+static int stampa_percorso(graph_t* autostrada, int* p, unsigned int src, unsigned int k){
     unsigned int n;
     if(k != src){
         n = p[k];
@@ -417,7 +482,7 @@ static int stampa_percorso(graph_t* autostrada, unsigned int* p, unsigned int sr
 }
 
 static void pianifica_percorso(graph_t* autostrada, unsigned short int from, unsigned short int to){
-    unsigned int* p;
+    int* p;
     if(hash_search(autostrada->array, from) == NIL || hash_search(autostrada->array, to) == NIL || autostrada->array.table[hash_search(autostrada->array, from)].head == NULL){
         fprintf(stdout, "nessun percorso\n");
         return;
@@ -432,8 +497,10 @@ static void pianifica_percorso(graph_t* autostrada, unsigned short int from, uns
                         hash_search(autostrada->array, to)
                     )!=0){
         fprintf(stdout, "nessun percorso\n");
+        free(p);
         return;
     }
+    fprintf(stdout, "\n");
     free(p);
     return;
 }
@@ -443,7 +510,6 @@ static void parse_and_execute(graph_t* autostrada){
     unsigned int arg1, arg2;
 
     while(fscanf(stdin, " %s", command) != EOF){
-        // fprintf(stderr, "\n%30s ", command);
         switch (command[0])
         {
             case 'd':                
@@ -478,7 +544,7 @@ static void parse_and_execute(graph_t* autostrada){
 static void debug_graph(graph_t* autostrada, FILE* fp){
     struct int_list_node* x;
     
-    fprintf(fp, "Graph Vertices: %d,\nHash table size: %d\n", autostrada->v, autostrada->array.m);
+    fprintf(fp, "Graph Vertices: %ld,\nHash table size: %ld\n", autostrada->v, autostrada->array.m);
     for(int i=0; i<autostrada->array.m; i++){
         fprintf(fp, "%3i: %4d -> ", i, autostrada->array.table[i].stazione.dist);
         if(autostrada->array.table[i].head == NULL)
@@ -493,20 +559,16 @@ static void debug_graph(graph_t* autostrada, FILE* fp){
 
 int main(int argc, char** argv){
     graph_t* autostrada;
-    int index;
 
     autostrada = alloc_graph(HASH_M);
 
     parse_and_execute(autostrada);
+
+    // for(struct int_list_node* x = autostrada->array.table[hash_search(autostrada->array, 1057)].head; x!=NULL; x=x->next)
+    //     fprintf(stderr, "%d ", x->key);
+    // fprintf(stderr, "\n");
     
     // debug_graph(autostrada, stderr);
-
-    // for(int i=0; i<autostrada->array.m; i++){
-    //     if(autostrada->array.table[i].stazione.dist != NIL){
-    //         index = hash_search(autostrada->array, autostrada->array.table[i].stazione.dist);
-    //         fprintf(stderr, "t[%d] = %d\n", index, autostrada->array.table[index].stazione.dist);
-    //     }
-    //}
 
     return 0;
 }
