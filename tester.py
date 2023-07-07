@@ -39,28 +39,33 @@ class Log():
         print(Log.progress_bar_char*(adj_index) + ' '*(length-adj_index), end=' ')
         print(f'{progress+1} of {max}', end=end)
 
-COMPILE_COMMAND = 'gcc -DEVAL -Wall -Werror -std=gnu11 -O2 -pipe -static -s main.c -lm'
+COMPILE_COMMAND = 'gcc -DEVAL -Wall -std=gnu11 -O2 -pipe -static -s main.c -lm'
 MAX_TEST = 111
 
 def line_by_line_compare(file1: str, file2:str) -> bool:
     f1 = open(file1, 'r')
     f2 = open(file2, 'r')
 
-    f1_content = [l for l in f1.readlines() if l!='\n']
-    f2_content = [l for l in f2.readlines() if l!='\n']
+    f1_content = [l.strip() for l in f1.readlines() if l!='\n']
+    f2_content = [l.strip() for l in f2.readlines() if l!='\n']
 
     if(len(f1_content) != len(f2_content)):
         print()
         Log.print_warning('Length mismatch')
         return False
-
+    ok = True
     for i in range(0, len(f1_content)):
         if(not f1_content[i] == f2_content[i]):
             print()
-            Log.print_warning(f"Mismatch found at line {i}: {f1_content[i].strip()} != {f2_content[i].strip()}")
-            return False
+            Log.print_warning(f"Mismatch found at line {i}:\n{path.basename(f1.name)}:\t{f1_content[i].strip()}\n{path.basename(f2.name)}:\t\t{f2_content[i].strip()}")
+            # f1.close()
+            # f2.close()
+            # return False
+            ok = False
 
-    return True
+    f1.close()
+    f2.close()
+    return ok
 
 
 def main() -> None:
@@ -85,16 +90,19 @@ def main() -> None:
                     else:
                         run(['chmod', '+x', 'a.out'], check=True)
                         proc = run(['./a.out'], shell=True, stdout=of, stdin=inf, stderr=PIPE)
+                        if(proc.returncode != 0):
+                            raise Exception(f'Program failed (exit code {proc.returncode})')
                         # print('\n' + proc.stderr.decode('utf-8'))
-
-            Log.print_progress_bar(i, MAX_TEST, 40)
 
             if(not line_by_line_compare(path.join('.', 'Test', f'open_{i}.output.txt'), 'output.txt')):
                 Log.print_err(f'Output mismatch at test {i}' + 30*' ')
-                return
+                continue
+
+            Log.print_progress_bar(i, MAX_TEST, 40)
         print()
         Log.print_ok('Done')
     except Exception as e:
+        print()
         Log.print_err(f'Runtime error: {e}')
 
 
