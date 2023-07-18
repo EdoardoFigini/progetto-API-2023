@@ -82,6 +82,48 @@ static void right_rotate(bst_t* t, struct bst_node* x){
     x->parent = y;
 }
 
+static struct bst_node* tree_minimum(bst_t* t, struct bst_node* x){
+    while (x->left != t->nil)
+        x = x->left;
+
+    return x;
+}
+
+static struct bst_node* tree_maximum(bst_t* t, struct bst_node* x){
+    while (x->right != t->nil)
+        x = x->right;
+
+    return x;
+}
+
+static struct bst_node* tree_successor(bst_t* t, struct bst_node* x){
+    struct bst_node* y;
+
+    if(x->right != t->nil)
+        return tree_minimum(t, x->right);
+    y = x->parent;
+    while(y!=t->nil && x==y->right){
+        x = y;
+        y = y->parent;
+    }
+
+    return y;
+}
+
+static struct bst_node* tree_predecessor(bst_t* t, struct bst_node* x){
+    struct bst_node* y;
+
+    if(x->left != t->nil)
+        return tree_maximum(t, x->left);
+    y = x->parent;
+    while(y!=t->nil && x==y->left){
+        x = y;
+        y = y->parent;
+    }
+
+    return y;
+}
+
 static int rb_insert_fixup(bst_t* t, struct bst_node* z){
     struct bst_node *x;
     struct bst_node *y;
@@ -132,6 +174,62 @@ static int rb_insert_fixup(bst_t* t, struct bst_node* z){
     return 0;
 }
 
+static void rb_delete_fixup(bst_t* t, struct bst_node* x){
+    struct bst_node* w;
+
+    if(x->color == RED || x->parent == t->nil)
+        x->color = BLACK;
+    else if (x == x->parent->left){
+        w = x->parent->right;
+        if(w->color == RED){
+            w->color = BLACK;
+            x->parent->color = RED;
+            left_rotate(t, x->parent);
+            w = x->parent->right;
+        }
+        if(w->left->color == BLACK && w->right->color == BLACK){
+            w->color = RED;
+            rb_delete_fixup(t, x->parent);
+        }
+        else {
+            if(w->right->color == BLACK){
+                w->left->color = BLACK;
+                w->color = RED;
+                right_rotate(t, w);
+                w = x->parent->right;
+            }
+            w->color = x->parent->color;
+            x->parent->color = BLACK;
+            x->right->color = BLACK;
+            left_rotate(t, x->parent);
+        }
+    } else {
+        w = x->parent->left;
+        if(w->color == RED){
+            w->color = BLACK;
+            x->parent->color = RED;
+            right_rotate(t, x->parent);
+            w = x->parent->left;
+        }
+        if(w->right->color == BLACK && w->left->color == BLACK){
+            w->color = RED;
+            rb_delete_fixup(t, x->parent);
+        }
+        else {
+            if(w->left->color == BLACK){
+                w->right->color = BLACK;
+                w->color = RED;
+                left_rotate(t, w);
+                w = x->parent->left;
+            }
+            w->color = x->parent->color;
+            x->parent->color = BLACK;
+            x->left->color = BLACK;
+            right_rotate(t, x->parent);
+        }
+    }
+}
+
 static struct bst_node* tree_insert(bst_t* t, int n){
     struct bst_node* x;
     struct bst_node* y;
@@ -139,7 +237,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
 
     z = (struct bst_node*)malloc(sizeof(struct bst_node));
     z->key = n;
-    memset(z->cars.a, 0, sizeof(int) * MAX_CARS);
+    memset(z->cars.a, NIL, sizeof(int) * MAX_CARS);
     z->cars.heapsize = 0;
 
     y = t->nil;
@@ -169,13 +267,46 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     return z;
 }
 
-static struct bst_node* tree_search(bst_t* t, struct bst_node* x, int n){
+static void tree_delete(bst_t* t, struct bst_node* z){
+    struct bst_node* y;
+    struct bst_node* x;
+
+    if(z->left == t->nil || z->right == t->nil)
+        y = z;
+    else
+        y = tree_successor(t, z);
+
+    (y->left != t->nil) ? (x = y->left) : (x = y->right);
+    
+    x->parent = y->parent;
+    if(y->parent == t->nil)
+        t->root = x;
+    else if(y == y->parent->left)
+        y->parent->left = x;
+    else 
+        y->parent->right = x;
+
+    if(y != z)
+        z->key = y->key;
+
+    if(y->color == BLACK)
+        rb_delete_fixup(t, x);
+
+    free(z);
+    // return y;
+}
+
+static struct bst_node* tree_search_util(bst_t* t, struct bst_node* x, int n){
     if(x == t->nil || x->key == n)
         return x;
     if(n < x->key) 
-        return tree_search(t, x->left, n);
+        return tree_search_util(t, x->left, n);
     else
-        return tree_search(t, x->right, n);
+        return tree_search_util(t, x->right, n);
+}
+
+static struct bst_node* tree_search(bst_t* t, int n){
+    return tree_search_util(t, t->root, n);
 }
 
 static void max_heapify(struct heap* h, int i){
@@ -199,7 +330,22 @@ static void heap_insert(struct heap* h, int k){
     h->a[(h->heapsize)++] = k;
     for(int i = (h->heapsize +1)/ 2; i>=0; i--)
         max_heapify(h, i);
-}; 
+}
+
+static int heap_delete(struct heap* h, int k){
+    int i;
+    for(i=0; i<h->heapsize && h->a[i] != k; i++);
+    if(i == h->heapsize)
+        return 1;
+
+    h->a[i] = NIL;
+    (h->heapsize)--;
+
+    for(i = (h->heapsize +1)/ 2; i>=0; i--)
+        max_heapify(h, i);
+
+    return 0;
+} 
 
 static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     struct bst_node* s;
@@ -220,7 +366,7 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
 
 static void aggiungi_auto(bst_t* autostrada, int stazione, int autonomia){
     struct bst_node* s;
-    s = tree_search(autostrada, autostrada->root, stazione);
+    s = tree_search(autostrada, stazione);
     if(s == autostrada->nil){
         fprintf(stdout, "non aggiunta\n");
         return;
@@ -233,15 +379,112 @@ static void aggiungi_auto(bst_t* autostrada, int stazione, int autonomia){
 
 
 static void demolisci_stazione(bst_t* autostrada, int stazione){
-    fprintf(stderr, "Not implemented\n");
+    struct bst_node* s;
+    s = tree_search(autostrada, stazione);
+    if(s == autostrada->nil){
+        fprintf(stdout, "non demolita\n");
+        return;
+    }
+
+    tree_delete(autostrada, s);
+
+    fprintf(stdout, "demolita\n");
 }
 
 static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
-    fprintf(stderr, "Not implemented\n");
+    struct bst_node* s;
+
+    s = tree_search(autostrada, stazione);
+    if(s == autostrada->nil){
+        fprintf(stdout, "non rottamata\n");
+        return;
+    }
+
+    if(heap_delete(&(s->cars), autonomia) != 0){
+        fprintf(stdout, "non rottamata\n");
+        return;
+    }
+
+    fprintf(stdout, "rottamata\n");
+}
+
+static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
+    struct bst_node* x;
+    struct bst_node* y;
+
+    x = to;
+
+    while(abs(from->key - x->key) > from->cars.a[0] && x != t->nil){
+        fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+        x = tree_successor(t, x);
+        if(x->key == to->key)
+            x = t->nil;
+    }
+    fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+    
+    if(x != from && x != t->nil){
+        fprintf(stdout, "%d ", from->key);
+        y = find_backwards(t, x, to);
+        if(y == t->nil)
+            return y;
+    }
+
+    return x;
+}
+    
+static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst_node* to){
+    struct bst_node* x;
+    struct bst_node* y;
+    
+    x = from;
+    
+    while(abs(to->key - x->key) > x->cars.a[0] && x != t->nil){
+        // fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+        x = tree_successor(t, x);
+        if(x->key == to->key)
+            x = t->nil;
+    }
+    // fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+    
+    if(x != from && x != t->nil){
+        y = find_forward(t, from, x);
+        if(y == t->nil)
+            return y;
+        fprintf(stdout, "%d ", y->key);
+    }
+    
+    return x;
 }
 
 static void pianifica_percorso(bst_t* autostrada, int from, int to){
-    fprintf(stderr, "Not implemented\n");
+    struct bst_node* start;
+    struct bst_node* end;
+    struct bst_node* x;
+    
+    start = tree_search(autostrada, from);
+    end = tree_search(autostrada, to);
+    if(start == autostrada->nil || end == autostrada->nil){
+        fprintf(stdout, "nessun percorso\n");
+        return;
+    }
+   
+    x = autostrada->nil;
+    if(to > from){
+        x = find_forward(autostrada, start, end);
+        if(x==autostrada->nil){
+            fprintf(stdout, "nessun percorso\n");
+            return;
+        }
+        fprintf(stdout, "%d %d\n", x->key, to);
+    } else {
+        x = find_backwards(autostrada, start, end);
+        if(x==autostrada->nil){
+            fprintf(stdout, "nessun percorso\n");
+            return;
+        }
+        fprintf(stdout, "%d", to);
+    }
+
 }
 
 static void parse_and_execute(bst_t* autostrada){
