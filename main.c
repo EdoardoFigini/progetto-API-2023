@@ -10,7 +10,7 @@
 
 struct heap{
     int a[MAX_CARS];
-    size_t heapsize;
+    size_t size;
 };
 
 struct bst_node{
@@ -66,7 +66,7 @@ static bst_t* init_tree(){
     t->nil->parent = t->root;
     t->nil->key = NIL;
     memset(t->nil->cars.a, 0, sizeof(int) * MAX_CARS);
-    t->nil->cars.heapsize = 0;
+    t->nil->cars.size = 0;
     t->nil->left = NULL;
     t->nil->right = NULL;
     t->nil->color = BLACK;
@@ -266,7 +266,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     z = (struct bst_node*)malloc(sizeof(struct bst_node));
     z->key = n;
     memset(z->cars.a, NIL, sizeof(int) * MAX_CARS);
-    z->cars.heapsize = 0;
+    z->cars.size = 0;
 
     y = t->nil;
     x = t->root;
@@ -343,8 +343,8 @@ static void max_heapify(struct heap* h, int i){
     int max;
     int tmp;
 
-    (l <= h->heapsize && h->a[l] > h->a[i]) ? (max = l) : (max = i);
-    if(r <= h->heapsize && h->a[r] > h->a[max])
+    (l <= h->size && h->a[l] > h->a[i]) ? (max = l) : (max = i);
+    if(r <= h->size && h->a[r] > h->a[max])
         max = r;
     if(max != i){
         tmp = h->a[i];
@@ -355,21 +355,21 @@ static void max_heapify(struct heap* h, int i){
 }
 
 static void heap_insert(struct heap* h, int k){
-    h->a[(h->heapsize)++] = k;
-    for(int i = (h->heapsize +1)/ 2; i>=0; i--)
+    h->a[(h->size)++] = k;
+    for(int i = (h->size +1)/ 2; i>=0; i--)
         max_heapify(h, i);
 }
 
 static int heap_delete(struct heap* h, int k){
     int i;
-    for(i=0; i<h->heapsize && h->a[i] != k; i++);
-    if(i == h->heapsize)
+    for(i=0; i<h->size && h->a[i] != k; i++);
+    if(i == h->size)
         return 1;
 
     h->a[i] = NIL;
-    (h->heapsize)--;
+    (h->size)--;
 
-    for(i = (h->heapsize +1)/ 2; i>=0; i--)
+    for(i = (h->size +1)/ 2; i>=0; i--)
         max_heapify(h, i);
 
     return 0;
@@ -386,9 +386,9 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     for(int i=0; i<num; i++){
         scanf(" %d", &n);
         // heap_insert(&(s->cars), n);
-        s->cars.a[(s->cars.heapsize)++] = n;
+        s->cars.a[(s->cars.size)++] = n;
     }
-    for(int i = (s->cars.heapsize + 1) / 2; i >= 0; i--)
+    for(int i = (s->cars.size + 1) / 2; i >= 0; i--)
         max_heapify(&(s->cars), i);
 
 
@@ -431,9 +431,9 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         return;
     }
     
-    fprintf(stderr, "%d\n", stazione);
-    for(int i=0; i<s->cars.heapsize; i++)
-        fprintf(stderr, "%d", s->cars.a[i]);
+    // fprintf(stderr, "%d\n", stazione);
+    // for(int i=0; i<s->cars.size; i++)
+    //     fprintf(stderr, "%d", s->cars.a[i]);
 
     if(heap_delete(&(s->cars), autonomia) != 0){
         fprintf(stdout, "non rottamata\n");
@@ -450,12 +450,12 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
     x = to;
 
     while(abs(from->key - x->key) > from->cars.a[0] && x != t->nil){
-        // fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+        fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
         x = tree_successor(t, x);
         if(x->key == from->key)
             x = t->nil;
     }
-    // fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+    fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
     
     if(x != from && x != t->nil){
         // \fprintf(stdout, "%d ", from->key);
@@ -467,7 +467,7 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
 
     return x;
 }
-    
+
 static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst_node* to){
     struct bst_node* x;
     struct bst_node* y;
@@ -475,12 +475,12 @@ static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst
     x = from;
     
     while(abs(to->key - x->key) > x->cars.a[0] && x != t->nil){
-        // fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+        fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
         x = tree_successor(t, x);
         if(x->key == to->key)
             x = t->nil;
     }
-    // fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+    fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
     
     if(x != from && x != t->nil){
         y = find_forward(t, from, x);
@@ -545,7 +545,7 @@ static void parse_and_execute(bst_t* autostrada){
                 break;
             case 'p':
                 scanf("%d %d", &arg1, &arg2);
-                pianifica_percorso(autostrada, arg1, arg2);
+                // pianifica_percorso(autostrada, arg1, arg2);
                 break;
             case 'a':
                 if (command[9]=='s'){
@@ -589,8 +589,8 @@ int main(int argc, char** argv) {
 
     parse_and_execute(autostrada);
     
-    // fprintf(stderr, "%d\n", autostrada->root->cars.heapsize);
-    // for(int i=0; i<autostrada->root->cars.heapsize; i++)
+    // fprintf(stderr, "%d\n", autostrada->root->cars.size);
+    // for(int i=0; i<autostrada->root->cars.size; i++)
     //     fprintf(stderr, "%d ", autostrada->root->cars.a[i]);
     // return 0;
 
