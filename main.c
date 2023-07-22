@@ -41,7 +41,7 @@ static void debug_tree(bst_t*);
 static void list_insert(list_t* l, int n){
     struct node* x;
 
-    x = malloc(sizeof(struct node*));
+    x = (struct node*)malloc(sizeof(struct node));
     x->key = n;
     x->next = l->head;
     l->head = x;
@@ -117,12 +117,12 @@ static struct bst_node* tree_minimum(bst_t* t, struct bst_node* x){
     return x;
 }
 
-static struct bst_node* tree_maximum(bst_t* t, struct bst_node* x){
-    while (x->right != t->nil)
-        x = x->right;
-
-    return x;
-}
+// static struct bst_node* tree_maximum(bst_t* t, struct bst_node* x){
+//     while (x->right != t->nil)
+//         x = x->right;
+// 
+//     return x;
+// }
 
 static struct bst_node* tree_successor(bst_t* t, struct bst_node* x){
     struct bst_node* y;
@@ -138,19 +138,19 @@ static struct bst_node* tree_successor(bst_t* t, struct bst_node* x){
     return y;
 }
 
-static struct bst_node* tree_predecessor(bst_t* t, struct bst_node* x){
-    struct bst_node* y;
-
-    if(x->left != t->nil)
-        return tree_maximum(t, x->left);
-    y = x->parent;
-    while(y!=t->nil && x==y->left){
-        x = y;
-        y = y->parent;
-    }
-
-    return y;
-}
+// static struct bst_node* tree_predecessor(bst_t* t, struct bst_node* x){
+//     struct bst_node* y;
+// 
+//     if(x->left != t->nil)
+//         return tree_maximum(t, x->left);
+//     y = x->parent;
+//     while(y!=t->nil && x==y->left){
+//         x = y;
+//         y = y->parent;
+//     }
+// 
+//     return y;
+// }
 
 static int rb_insert_fixup(bst_t* t, struct bst_node* z){
     struct bst_node *x;
@@ -380,11 +380,13 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     int n;
 
     s = tree_insert(autostrada, dist);
-    if(s == autostrada->nil)
+    if(s == autostrada->nil){
         fprintf(stdout, "non aggiunta\n");
+        return;
+    }
 
     for(int i=0; i<num; i++){
-        scanf(" %d", &n);
+        if(scanf(" %d", &n)){};
         // heap_insert(&(s->cars), n);
         s->cars.a[(s->cars.size)++] = n;
     }
@@ -458,7 +460,7 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
     fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
     
     if(x != from && x != t->nil){
-        // \fprintf(stdout, "%d ", from->key);
+        // fprintf(stdout, "%d ", from->key);
         y = find_backwards(t, x, to, l);
         if(y == t->nil)
             return y;
@@ -468,6 +470,32 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
     return x;
 }
 
+// static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to, list_t* l){
+//     struct bst_node* x;
+//     struct bst_node* y;
+// 
+//     x = tree_successor(t, to);
+// 
+//     while(abs(to->key - x->key) > x->cars.a[0] && x != t->nil){
+//         fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+//         x = tree_successor(t, x);
+//         if(x == from)
+//             x = t->nil;
+//     }
+//     fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+//     
+//     fprintf(stderr, "x=%5d\n", x->key);
+//     if(x != from && x != t->nil){
+//         y = find_backwards(t, from, x, l);
+//         if(y == t->nil)
+//             return y;
+//         fprintf(stdout, "%d ", y->key);
+//         // list_insert(l, y->key);
+//     }
+// 
+//     return x;
+// }
+
 static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst_node* to){
     struct bst_node* x;
     struct bst_node* y;
@@ -475,13 +503,14 @@ static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst
     x = from;
     
     while(abs(to->key - x->key) > x->cars.a[0] && x != t->nil){
-        fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+        fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
         x = tree_successor(t, x);
-        if(x->key == to->key)
+        if(x == to)
             x = t->nil;
     }
-    fprintf(stderr, "%5d -> %5d:\tdist=%d,\tautonomia=%d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+    fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
     
+    fprintf(stderr, "x=%5d\n", x->key);
     if(x != from && x != t->nil){
         y = find_forward(t, from, x);
         if(y == t->nil)
@@ -536,24 +565,24 @@ static void parse_and_execute(bst_t* autostrada){
         switch (command[0])
         {
             case 'd':                
-                scanf("%d", &arg1);
+                if(scanf("%d", &arg1)){}
                 demolisci_stazione(autostrada, arg1);
                 break;
             case 'r':
-                scanf("%d %d", &arg1, &arg2);
+                if(scanf("%d %d", &arg1, &arg2)){}
                 rottama_auto(autostrada, arg1, arg2);
                 break;
             case 'p':
-                scanf("%d %d", &arg1, &arg2);
-                // pianifica_percorso(autostrada, arg1, arg2);
+                if(scanf("%d %d", &arg1, &arg2)){}
+                pianifica_percorso(autostrada, arg1, arg2);
                 break;
             case 'a':
                 if (command[9]=='s'){
-                    scanf("%d %d", &arg1, &arg2);
+                    if(scanf("%d %d", &arg1, &arg2)){}
                     aggiungi_stazione(autostrada, arg1, arg2);
 
                 } else {
-                    scanf("%d %d", &arg1, &arg2);
+                    if(scanf("%d %d", &arg1, &arg2)){}
                     aggiungi_auto(autostrada, arg1, arg2);
                 }
                 break;
