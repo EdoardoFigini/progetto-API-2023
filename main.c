@@ -273,6 +273,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
 
     while(x!=t->nil){
         y = x;
+        // fprintf(stderr, "%d\n", x->key);
         (z->key < x->key) ? (x = x->left) : (x = x->right);
     }
     z->parent = y;
@@ -286,11 +287,12 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     } else {
         y->right = z;
     }
-
+    
     z->left = t->nil;
     z->right = t->nil;
     z->color = RED;
-    rb_insert_fixup(t, z);
+    // -------------RB TREE--------------
+    // rb_insert_fixup(t, z);
        
     return z;
 }
@@ -304,24 +306,36 @@ static void tree_delete(bst_t* t, struct bst_node* z){
     else
         y = tree_successor(t, z);
 
-    (y->left != t->nil) ? (x = y->left) : (x = y->right);
+    if(y->left != t->nil){
+        x = y->left;
+    } else {
+        x = y->right;
+    }
+   
+    if(x != t->nil)
+        x->parent = y->parent;
     
-    x->parent = y->parent;
-    if(y->parent == t->nil)
+    if(y->parent == t->nil){
         t->root = x;
-    else if(y == y->parent->left)
+    } else if(y == y->parent->left){
         y->parent->left = x;
-    else 
+    } else { 
         y->parent->right = x;
+    }
 
     if(y != z)
         z->key = y->key;
 
-    if(y->color == BLACK)
-        rb_delete_fixup(t, x);
+    // if(y->color == BLACK)
+    //     rb_delete_fixup(t, x);
+
+    // struct bst_node* s = z->parent;
+    // fprintf(stderr, "%d: %p\n", s->key, s);
+    // fprintf(stderr, "\t%d: %p\n", s->left->key, s->left);
+    // fprintf(stderr, "\t%d: %p\n", s->right->key, s->right);
+    // debug_tree(t);
 
     free(z);
-    // return y;
 }
 
 static struct bst_node* tree_search_util(bst_t* t, struct bst_node* x, int n){
@@ -418,7 +432,10 @@ static void demolisci_stazione(bst_t* autostrada, int stazione){
         fprintf(stdout, "non demolita\n");
         return;
     }
-
+    
+    // fprintf(stderr, "%d: %p\n", s->key, s);
+    // fprintf(stderr, "\t%d: %p\n", s->left->key, s->left);
+    // fprintf(stderr, "\t%d: %p\n", s->right->key, s->right);
     tree_delete(autostrada, s);
 
     fprintf(stdout, "demolita\n");
@@ -454,11 +471,12 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
     while(abs(from->key - x->key) > from->cars.a[0] && x != t->nil){
         fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
         x = tree_successor(t, x);
-        if(x->key == from->key)
+        if(x == from)
             x = t->nil;
     }
     fprintf(stderr, "%d -> %d: dist=%d, autonomia=%d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
     
+    fprintf(stderr, "x = %d\n", x->key);
     if(x != from && x != t->nil){
         // fprintf(stdout, "%d ", from->key);
         y = find_backwards(t, x, to, l);
@@ -474,15 +492,15 @@ static struct bst_node* find_backwards(bst_t* t, struct bst_node* from, struct b
 //     struct bst_node* x;
 //     struct bst_node* y;
 // 
-//     x = tree_successor(t, to);
+//     x = to;
 // 
-//     while(abs(to->key - x->key) > x->cars.a[0] && x != t->nil){
-//         fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+//     while(abs(to->key - x->key) < x->cars.a[0] && x != t->nil){
+//         // fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
 //         x = tree_successor(t, x);
 //         if(x == from)
 //             x = t->nil;
 //     }
-//     fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
+//     // fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", from->key, x->key, abs(from->key - x->key), from->cars.a[0]);
 //     
 //     fprintf(stderr, "x=%5d\n", x->key);
 //     if(x != from && x != t->nil){
@@ -508,9 +526,9 @@ static struct bst_node* find_forward(bst_t* t, struct bst_node* from, struct bst
         if(x == to)
             x = t->nil;
     }
-    fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
+    // fprintf(stderr, "%5d -> %5d:\tdist=%5d,\tautonomia=%5d\n", x->key, to->key, abs(to->key - x->key), x->cars.a[0]);
     
-    fprintf(stderr, "x=%5d\n", x->key);
+    // fprintf(stderr, "x=%5d\n", x->key);
     if(x != from && x != t->nil){
         y = find_forward(t, from, x);
         if(y == t->nil)
@@ -623,7 +641,8 @@ int main(int argc, char** argv) {
     //     fprintf(stderr, "%d ", autostrada->root->cars.a[i]);
     // return 0;
 
-    debug_tree(autostrada);
+    // debug_tree(autostrada);
+    
     
     return 0;
 }
