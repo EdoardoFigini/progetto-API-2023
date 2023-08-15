@@ -32,21 +32,6 @@ typedef struct{
     size_t size;
 } bst_t;
 
-struct node{
-    int key;
-    struct node* next;
-};  
-
-typedef struct {
-    struct node* head;
-} list_t;
-
-struct bfs_node {
-    int key;
-    int color;
-    int dist;
-};
-
 typedef struct queue {
     struct bst_node** q;
     int tail;
@@ -56,25 +41,6 @@ typedef struct queue {
 
 
 static void debug_tree(bst_t*);
-
-static void list_insert(list_t* l, int n){
-    struct node* x;
-
-    x = (struct node*)malloc(sizeof(struct node));
-    x->key = n;
-    x->next = l->head;
-    l->head = x;
-}
-
-static void list_destroy(list_t* l){
-    struct node* x;
-
-    while(l->head!=NULL){
-        x = l->head;
-        l->head = l->head->next;
-        free(x);
-    }
-}
 
 static bst_t* init_tree(){
     bst_t* t;
@@ -131,7 +97,14 @@ static struct bst_node* tree_insert(bst_t* t, int n){
 
     while(x!=NULL){
         y = x;
-        (z->key < x->key) ? (x = x->left) : (x = x->right);
+        if(z->key < x->key){
+            x = x->left;
+        } else if(z->key == x->key){
+            free(z);
+            return NULL;
+        } else {
+            x = x->right;
+        }
     }
     z->parent = y;
 
@@ -149,7 +122,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     z->left = NULL;
     z->right = NULL;
 
-    t->size += 1;
+    (t->size)++;
        
     return z;
 }
@@ -180,19 +153,22 @@ static void tree_delete(bst_t* t, struct bst_node* z){
         y->parent->right = x;
     }
 
-    if(y != z)
+    if(y != z){
         z->key = y->key;
+        memcpy(&(z->cars), &(y->cars), sizeof(struct heap));
+    }
 
-    free(z);
+    free(y);
 }
 
 static struct bst_node* tree_search_util(struct bst_node* x, int n){
     if(x == NULL || x->key == n)
         return x;
-    if(n < x->key) 
+    if(n < x->key){ 
         return tree_search_util(x->left, n);
-    else
+    } else {
         return tree_search_util(x->right, n);
+    }
 }
 
 static struct bst_node* tree_search(bst_t* t, int n){
@@ -214,9 +190,9 @@ static void tree_destroy(bst_t* t){
 
 static void max_heapify(struct heap* h, int i){
     int l = 2*i;
-    int r = l + 1;
-    int max;
-    int tmp;
+    int r = 2*i + 1;
+    int max = NIL;
+    int tmp = NIL;
 
     (l <= h->size && h->a[l] > h->a[i]) ? (max = l) : (max = i);
     if(r <= h->size && h->a[r] > h->a[max])
@@ -231,27 +207,28 @@ static void max_heapify(struct heap* h, int i){
 
 static void heap_insert(struct heap* h, int k){
     h->a[(h->size)++] = k;
-    for(int i = (h->size +1)/ 2; i>=0; i--)
+    for(int i = (h->size)/ 2; i>=0; i--){
         max_heapify(h, i);
+    }
 }
 
 static int heap_delete(struct heap* h, int k){
     int i;
     for(i=0; i<h->size && h->a[i] != k; i++);
-    if(i == h->size)
-        return 1;
+    if(i >= h->size)
+        return -1;
 
     h->a[i] = NIL;
     (h->size)--;
 
-    for(i = (h->size +1)/ 2; i>=0; i--)
+    for(i = (h->size)/ 2; i>=0; i--)
         max_heapify(h, i);
 
     return 0;
 } 
 
 static void enqueue(queue_t* queue, struct bst_node* x){
-    if(queue->tail == queue->length && queue->head == 0 || queue->head == queue->tail + 1){
+    if((queue->tail == queue->length && queue->head == 0) || queue->head == queue->tail + 1){
         fprintf(stderr, "failed to enqueue %d\n", x->key);
         return;
     }
@@ -299,9 +276,17 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
         // heap_insert(&(s->cars), n);
         s->cars.a[(s->cars.size)++] = n;
     }
-    for(int i = (s->cars.size + 1) / 2; i >= 0; i--)
+    for(int i = s->cars.size/ 2; i >= 0; i--){
         max_heapify(&(s->cars), i);
-
+    }
+        
+    // if(dist == 8424){
+    //     fprintf(stderr, "\n%d : %lu (base addr: %p)\n", s->key, s->cars.size, s->cars.a);
+    //     for(int i=0; i<MAX_CARS; i++){
+    //         fprintf(stderr, "%d ", s->cars.a[i]);
+    //     }
+    //     fprintf(stderr, "\n\n\n");
+    // }
 
     fprintf(stdout, "aggiunta\n");
 }
@@ -342,11 +327,19 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         return;
     }
 
+    // if(stazione == 8424){
+    //     fprintf(stderr, "\n%d : %lu (base addr: %p)\n", s->key, s->cars.size, s->cars.a);
+    //     for(int i=0; i<MAX_CARS; i++){
+    //         fprintf(stderr, "%d ", s->cars.a[i]);
+    //     }
+    //     fprintf(stderr, "\n\n\n");
+    // }
+
     if(heap_delete(&(s->cars), autonomia) != 0){
         fprintf(stdout, "non rottamata\n");
         return;
     }
-
+    
     fprintf(stdout, "rottamata\n");
 }
 
@@ -368,7 +361,7 @@ static void find_adj_fore(struct bst_node* x, struct bst_node* origin, queue_t* 
                 if(x->color == WHITE){
                     enqueue(q, x);
                 }
-                if(x->next==NULL || (x->next!=NULL && x->next->key > origin->key)){
+                if(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)){
                     x->next = origin;
                 }
                 x->color = GRAY;
@@ -388,7 +381,7 @@ static void find_adj_back(struct bst_node* x, struct bst_node* dest, queue_t* q)
                 if(x->color == WHITE){
                     enqueue(q, x);
                 }
-                if(x->next==NULL || (x->next!=NULL && x->next->key > dest->key)){
+                if(x->next==NULL || (x->next!=NULL && dest->key < x->next->key)){
                     x->next = dest;
                 }
                 x->color = GRAY;
@@ -402,7 +395,7 @@ static void find_adj_back(struct bst_node* x, struct bst_node* dest, queue_t* q)
 static void print_backwards(struct bst_node* x){
     if(x != NULL){
         fprintf(stdout, x->next==NULL ? "%u\n" : "%u ", x->key);
-        fprintf(stderr, x->next==NULL ? "%u\n" : "%u ", x->key);
+        // fprintf(stderr, x->next==NULL ? "%u\n" : "%u ", x->key);
         print_backwards(x->next);
     }
 }
@@ -411,7 +404,7 @@ static void print_forwards(struct bst_node* x){
     if(x != NULL){
         print_forwards(x->next);
         fprintf(stdout, x->color == 3 ? "%u\n" : "%u ", x->key);
-        fprintf(stderr, x->color == 3 ? "%u\n" : "%u ", x->key);
+        // fprintf(stderr, x->color == 3 ? "%u\n" : "%u ", x->key);
     }
 }
 
@@ -427,11 +420,17 @@ static int find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
     to->color = GRAY;
     to->dist = 0;
 
-    q = malloc(sizeof(queue_t));
+    q = (queue_t*)malloc(sizeof(queue_t));
+    if(q == NULL){
+        return -1;
+    }
     q->head = 0;
     q->tail = 0;
     q->length = t->size;
     q->q = malloc(sizeof(struct bst_node) * q->length);
+    if(q->q == NULL){
+        return -1;
+    }
     memset(q->q, 0x0, sizeof(struct bst_node*) * q->length); 
 
     enqueue(q, to);
@@ -500,6 +499,16 @@ static int find_forwards(bst_t* t, struct bst_node* from, struct bst_node* to){
         }
         find_adj_fore(t->root, u, q);
         u->color = BLACK;
+        // print queue
+        // fprintf(stderr, "size: %u\n", q->length);
+        // for(int i=0; i<q->length; i++){
+        //     if(q->q[i] == NULL){
+        //         fprintf(stderr, "NULL ");
+        //     } else {
+        //         fprintf(stderr, "%4d ", q->q[i]->key);
+        //     }
+        // }
+        // fprintf(stderr, "\n-----------------------------------------------------\n");
     }
 
     if(to->dist == INFTY){
@@ -550,8 +559,7 @@ static void parse_and_execute(bst_t* autostrada){
     int arg1, arg2;
 
     while(fscanf(stdin, " %s", command) != EOF){
-        switch (command[0])
-        {
+        switch (command[0]){
             case 'd':                
                 if(scanf("%d", &arg1)){}
                 demolisci_stazione(autostrada, arg1);
@@ -596,7 +604,7 @@ static void debug_tree_util(bst_t* t, struct bst_node* node, int space){
 }
 
 static void debug_tree(bst_t* t){
-    fprintf(stderr, "size: %u\n", t->size);
+    fprintf(stderr, "size: %lu\n", t->size);
     debug_tree_util(t, t->root, 0);
     fprintf(stderr, "-----------------------------------------------------------------------\n");
 }
