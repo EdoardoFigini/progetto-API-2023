@@ -8,7 +8,7 @@
 #define BLACK       1
 #define GRAY        2
 #define MAX_CARS    512
-#define INFTY       (int)0xFFFFFFFF
+#define INFTY       (unsigned int)0xFFFFFFFF
 
 struct heap{
     int a[MAX_CARS];
@@ -182,29 +182,33 @@ static void tree_delete(bst_t* t, struct bst_node* z){
     if(y != z)
         z->key = y->key;
 
-    // if(y->color == BLACK)
-    //     rb_delete_fixup(t, x);
-
-    // struct bst_node* s = z->parent;
-    // fprintf(stderr, "%d: %p\n", s->key, s);
-    // fprintf(stderr, "\t%d: %p\n", s->left->key, s->left);
-    // fprintf(stderr, "\t%d: %p\n", s->right->key, s->right);
-    // debug_tree(t);
-
     free(z);
 }
 
-static struct bst_node* tree_search_util(bst_t* t, struct bst_node* x, int n){
+static struct bst_node* tree_search_util(struct bst_node* x, int n){
     if(x == NULL || x->key == n)
         return x;
     if(n < x->key) 
-        return tree_search_util(t, x->left, n);
+        return tree_search_util(x->left, n);
     else
-        return tree_search_util(t, x->right, n);
+        return tree_search_util(x->right, n);
 }
 
 static struct bst_node* tree_search(bst_t* t, int n){
-    return tree_search_util(t, t->root, n);
+    return tree_search_util(t->root, n);
+}
+
+static void tree_destroy_util(struct bst_node* x){
+    if(x!=NULL){
+        tree_destroy_util(x->right);
+        tree_destroy_util(x->left);
+        free(x);
+    }
+}
+
+static void tree_destroy(bst_t* t){
+    tree_destroy_util(t->root);
+    free(t);
 }
 
 static void max_heapify(struct heap* h, int i){
@@ -321,9 +325,6 @@ static void demolisci_stazione(bst_t* autostrada, int stazione){
         return;
     }
     
-    // fprintf(stderr, "%d: %p\n", s->key, s);
-    // fprintf(stderr, "\t%d: %p\n", s->left->key, s->left);
-    // fprintf(stderr, "\t%d: %p\n", s->right->key, s->right);
     tree_delete(autostrada, s);
 
     fprintf(stdout, "demolita\n");
@@ -362,16 +363,15 @@ static void find_dist(struct bst_node* x, struct bst_node* origin, queue_t* q, u
                 x->color = GRAY;
                 x->dist = origin->dist + 1;
                 enqueue(q, x);
-                // if(x->key < p[x->dist]){
-                if(x->prev == NULL || (x->prev!=NULL && x->prev->key > origin->key)){
-                    x->prev = origin;
-                //     p[x->dist] = x->key;
-                //     p[x->dist+1] = x->key;
+                if(x->key < p[x->dist]){
+                    p[x->dist] = x->key;
+                    p[x->dist+1] = x->key;
                 }
+                // x->prev = origin;
             }
         }
-        find_dist(x->right, origin, q, p);
         find_dist(x->left, origin, q, p);
+        find_dist(x->right, origin, q, p);
     }
 }
 
@@ -426,11 +426,11 @@ static int find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
     if(to->dist == INFTY)
         return -1;
     
-    stampa(to);
+    // stampa(to);
     
-    // for(int i=0; i<=to->dist; i++){
-    //     fprintf(stdout, i!=to->dist ? "%d " : "%d\n", percorso[i]);
-    // }
+    for(int i=0; i<=to->dist; i++){
+        fprintf(stdout, i!=to->dist ? "%d " : "%d\n", percorso[i]);
+    }
 
     free(q->q);
     free(q);
@@ -563,6 +563,7 @@ int main(int argc, char** argv) {
 
     // debug_tree(autostrada);
     
+    tree_destroy(autostrada);
     
     return 0;
 }
