@@ -22,6 +22,7 @@ struct bst_node{
     struct bst_node* left;
     struct bst_node* right;
     struct bst_node* next;
+    unsigned int steps;
     unsigned int dist;
     unsigned int color;
 };
@@ -89,7 +90,8 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     memset(z->cars.a, NIL, sizeof(int) * MAX_CARS);
     z->cars.size = 0;
     z->color = WHITE;
-    z->dist = INFTY;
+    z->steps = INFTY;
+    z->steps = INFTY;
     z->next = NULL;
 
     y = NULL;
@@ -214,15 +216,19 @@ static void heap_insert(struct heap* h, int k){
 
 static int heap_delete(struct heap* h, int k){
     int i;
+
     for(i=0; i<h->size && h->a[i] != k; i++);
     if(i >= h->size)
         return -1;
 
-    h->a[i] = NIL;
-    (h->size)--;
+    h->a[i] = h->a[h->size - 1];
+    h->a[h->size - 1] = NIL;
 
-    for(i = (h->size)/ 2; i>=0; i--)
+    for(i = (h->size)/2; i>=0; i--){
         max_heapify(h, i);
+    }
+
+    (h->size)--;
 
     return 0;
 } 
@@ -246,8 +252,6 @@ static struct bst_node* dequeue(queue_t* queue){
     if(queue->head == queue->tail)
         return NULL;
     
-    // for(int i=0; i<queue->length; i++)
-    //     queue->q[i] == NULL ? fprintf(stderr, "%2d: NULL\n", i): fprintf(stderr, "%2d: %d\n", i, queue->q[i]->key);
     x = queue->q[queue->head];
     queue->q[queue->head] = NULL;
     if(queue->head == queue->length)
@@ -279,14 +283,6 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     for(int i = s->cars.size/ 2; i >= 0; i--){
         max_heapify(&(s->cars), i);
     }
-        
-    // if(dist == 8424){
-    //     fprintf(stderr, "\n%d : %lu (base addr: %p)\n", s->key, s->cars.size, s->cars.a);
-    //     for(int i=0; i<MAX_CARS; i++){
-    //         fprintf(stderr, "%d ", s->cars.a[i]);
-    //     }
-    //     fprintf(stderr, "\n\n\n");
-    // }
 
     fprintf(stdout, "aggiunta\n");
 }
@@ -327,8 +323,8 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         return;
     }
 
-    // if(stazione == 8424){
-    //     fprintf(stderr, "\n%d : %lu (base addr: %p)\n", s->key, s->cars.size, s->cars.a);
+    // if(stazione == 11704){
+    //     fprintf(stderr, "\n%d --/-> %d\n", s->key, autonomia);
     //     for(int i=0; i<MAX_CARS; i++){
     //         fprintf(stderr, "%d ", s->cars.a[i]);
     //     }
@@ -346,7 +342,7 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
 static void reset(struct bst_node* x){
     if(x != NULL){
         x->color = WHITE;
-        x->dist = INFTY;
+        x->steps = INFTY;
         x->next = NULL;
         reset(x->right);
         reset(x->left);
@@ -355,9 +351,9 @@ static void reset(struct bst_node* x){
 
 static void find_adj_fore(struct bst_node* x, struct bst_node* origin, queue_t* q){
     if(x != NULL){
-        if(x->key > origin->key && get_max_car(origin) >= abs(x->key - origin->key)){   /* se e' raggiungibile */
-            if((unsigned int)x->dist > (unsigned int)(origin->dist)){                   /* se ho trovato un candidato migliore */
-                x->dist = origin->dist + 1;
+        if(get_max_car(origin) >= abs(x->key - origin->key)){   /* se e' raggiungibile */
+            if((unsigned int)x->steps > (unsigned int)(origin->steps)){                 /* se ho trovato un candidato migliore */
+                x->steps = origin->steps + 1;
                 if(x->color == WHITE){
                     enqueue(q, x);
                 }
@@ -374,21 +370,22 @@ static void find_adj_fore(struct bst_node* x, struct bst_node* origin, queue_t* 
 
 static void find_adj_back(struct bst_node* x, struct bst_node* dest, queue_t* q){
     if(x != NULL){
-        // fprintf(stderr, "%4d -> %4d,\tautonomia: %u,\tdistanza: %u\t| x->dist: %u\tdest->dist: %u\n", x->key, dest->key, get_max_car(x), abs(x->key - dest->key), x->dist, dest->dist);
+        // fprintf(stderr, "%4d -> %4d,\tautonomia: %u,\tdistanza: %u\t| x->steps: %u\tdest->steps: %u\n", x->key, dest->key, get_max_car(x), abs(x->key - dest->key), x->steps, dest->steps);
         if(x->key > dest->key && get_max_car(x) >= abs(x->key - dest->key)){    /* se e' raggiungibile */
-            if((unsigned int)x->dist > (unsigned int)(dest->dist)){             /* se ho trovato un candidato migliore */
-                x->dist = dest->dist + 1;
+            if((unsigned int)x->steps > (unsigned int)(dest->steps)){           /* se ho trovato un candidato migliore */
+                x->steps = dest->steps + 1;
                 if(x->color == WHITE){
                     enqueue(q, x);
                 }
-                if(x->next==NULL || (x->next!=NULL && dest->key < x->next->key)){
+                if((x->next==NULL) || ((x->next!=NULL && dest->key < x->next->key) || (dest->dist < x->dist))){
                     x->next = dest;
+                    x->dist = x->key + dest->key;
                 }
                 x->color = GRAY;
             }
         }
-        find_adj_back(x->right, dest, q);
         find_adj_back(x->left, dest, q);
+        find_adj_back(x->right, dest, q);
     }
 }
 
@@ -418,6 +415,7 @@ static int find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
     reset(t->root);
 
     to->color = GRAY;
+    to->steps = 0;
     to->dist = 0;
 
     q = (queue_t*)malloc(sizeof(queue_t));
@@ -457,7 +455,7 @@ static int find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
 
     // debug_tree(t);
 
-    if(from->dist == INFTY && from->next==NULL){
+    if(from->steps == INFTY && from->next==NULL){
         free(q->q);
         free(q);
         return -1;
@@ -481,7 +479,7 @@ static int find_forwards(bst_t* t, struct bst_node* from, struct bst_node* to){
     reset(t->root);
 
     from->color = GRAY;
-    from->dist = 0;
+    from->steps = 0;
 
     q = malloc(sizeof(queue_t));
     q->head = 0;
@@ -511,7 +509,7 @@ static int find_forwards(bst_t* t, struct bst_node* from, struct bst_node* to){
         // fprintf(stderr, "\n-----------------------------------------------------\n");
     }
 
-    if(to->dist == INFTY){
+    if(to->steps == INFTY){
         free(q->q);
         free(q);
         return -1;
@@ -545,7 +543,7 @@ static void pianifica_percorso(bst_t* autostrada, int from, int to){
             return;
         }
     } else {
-        res = find_backwards(autostrada, start, end);
+        res = find_forwards(autostrada, start, end);
         if(res!=0){
             fprintf(stdout, "nessun percorso\n");
             return;
