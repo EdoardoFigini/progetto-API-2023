@@ -23,13 +23,11 @@ struct bst_node{
     struct bst_node* right;
     struct bst_node* next;
     unsigned int steps;
-    unsigned int dist;
-    unsigned int color;
+    unsigned short int color;
 };
 
 typedef struct{
     struct bst_node* root;
-    // struct bst_node* nil;
     size_t size;
 } bst_t;
 
@@ -41,7 +39,7 @@ typedef struct queue {
 } queue_t;
 
 
-static void debug_tree(bst_t*);
+// static void debug_tree(bst_t*);
 
 static bst_t* init_tree(){
     bst_t* t;
@@ -58,13 +56,6 @@ static struct bst_node* tree_minimum(struct bst_node* x){
 
     return x;
 }
-
-// static struct bst_node* tree_maximum(bst_t* t, struct bst_node* x){
-//     while (x->right != NULL)
-//         x = x->right;
-// 
-//     return x;
-// }
 
 static struct bst_node* tree_successor(struct bst_node* x){
     struct bst_node* y;
@@ -209,9 +200,10 @@ static void max_heapify(struct heap* h, int i){
 
 static void heap_insert(struct heap* h, int k){
     h->a[(h->size)++] = k;
-    for(int i = (h->size)/ 2; i>=0; i--){
-        max_heapify(h, i);
-    }
+    // for(int i = (h->size)/ 2; i>=0; i--){
+    //     max_heapify(h, i);
+    // }
+
 }
 
 static int heap_delete(struct heap* h, int k){
@@ -223,19 +215,19 @@ static int heap_delete(struct heap* h, int k){
 
     h->a[i] = h->a[h->size - 1];
     h->a[h->size - 1] = NIL;
-
-    for(i = (h->size)/2; i>=0; i--){
-        max_heapify(h, i);
-    }
-
     (h->size)--;
+
+    // for(i = (h->size)/2; i>=0; i--){
+    //     max_heapify(h, i);
+    // }
+    
+
 
     return 0;
 } 
 
 static void enqueue(queue_t* queue, struct bst_node* x){
     if((queue->tail == queue->length && queue->head == 0) || queue->head == queue->tail + 1){
-        fprintf(stderr, "failed to enqueue %d\n", x->key);
         return;
     }
 
@@ -262,7 +254,7 @@ static struct bst_node* dequeue(queue_t* queue){
 }
 
 static int get_max_car(struct bst_node* x){
-    return x->cars.a[0];
+    return *(x->cars.a);
 }
 
 static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
@@ -277,12 +269,12 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
 
     for(int i=0; i<num; i++){
         if(scanf(" %d", &n)){};
-        // heap_insert(&(s->cars), n);
         s->cars.a[(s->cars.size)++] = n;
     }
-    for(int i = s->cars.size/ 2; i >= 0; i--){
-        max_heapify(&(s->cars), i);
-    }
+    // for(int i = s->cars.size/ 2; i >= 0; i--){
+    //     max_heapify(&(s->cars), i);
+    // }
+
 
     fprintf(stdout, "aggiunta\n");
 }
@@ -323,14 +315,6 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         return;
     }
 
-    // if(stazione == 11704){
-    //     fprintf(stderr, "\n%d --/-> %d\n", s->key, autonomia);
-    //     for(int i=0; i<MAX_CARS; i++){
-    //         fprintf(stderr, "%d ", s->cars.a[i]);
-    //     }
-    //     fprintf(stderr, "\n\n\n");
-    // }
-
     if(heap_delete(&(s->cars), autonomia) != 0){
         fprintf(stdout, "non rottamata\n");
         return;
@@ -349,129 +333,34 @@ static void reset(struct bst_node* x){
     }
 }
 
-static void find_adj_fore(struct bst_node* x, struct bst_node* origin, queue_t* q){
-    if(x != NULL){
-        if(get_max_car(origin) >= abs(x->key - origin->key)){   /* se e' raggiungibile */
-            if((unsigned int)x->steps > (unsigned int)(origin->steps)){                 /* se ho trovato un candidato migliore */
-                x->steps = origin->steps + 1;
-                if(x->color == WHITE){
-                    enqueue(q, x);
-                }
-                if(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)){
-                    x->next = origin;
-                }
-                x->color = GRAY;
+static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t* q, int dir){
+    if(x != origin && (x->key > origin->key) == dir && get_max_car(origin) >= abs(x->key - origin->key)){
+        if((unsigned int)x->steps > (unsigned int)(origin->steps)){
+            x->steps = origin->steps + 1;
+            if(x->color == WHITE){
+                enqueue(q, x);
             }
-        }
-        find_adj_fore(x->right, origin, q);
-        find_adj_fore(x->left, origin, q);
-    }
-}
-
-static void find_adj_back(struct bst_node* x, struct bst_node* dest, queue_t* q){
-    if(x != NULL){
-        // fprintf(stderr, "%4d -> %4d,\tautonomia: %u,\tdistanza: %u\t| x->steps: %u\tdest->steps: %u\n", x->key, dest->key, get_max_car(x), abs(x->key - dest->key), x->steps, dest->steps);
-        if(x->key > dest->key && get_max_car(x) >= abs(x->key - dest->key)){    /* se e' raggiungibile */
-            if((unsigned int)x->steps > (unsigned int)(dest->steps)){           /* se ho trovato un candidato migliore */
-                x->steps = dest->steps + 1;
-                if(x->color == WHITE){
-                    enqueue(q, x);
-                }
-                if((x->next==NULL) || ((x->next!=NULL && dest->key < x->next->key) || (dest->dist < x->dist))){
-                    x->next = dest;
-                    x->dist = x->key + dest->key;
-                }
-                x->color = GRAY;
+            if(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)){
+                x->next = origin;
             }
+            x->color = GRAY;
         }
-        find_adj_back(x->left, dest, q);
-        find_adj_back(x->right, dest, q);
     }
+    if(x->left!=NULL && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key)))
+        find_adjacents(x->left, origin, q, dir);
+    if(x->right!=NULL && (!dir || (dir && get_max_car(origin) > x->key - origin->key)) && (dir || (!dir && origin->key > x->key)))
+        find_adjacents(x->right, origin, q, dir);
 }
 
-static void print_backwards(struct bst_node* x){
+static void print_path(struct bst_node* x){
     if(x != NULL){
-        fprintf(stdout, x->next==NULL ? "%u\n" : "%u ", x->key);
-        // fprintf(stderr, x->next==NULL ? "%u\n" : "%u ", x->key);
-        print_backwards(x->next);
-    }
-}
-
-static void print_forwards(struct bst_node* x){
-    if(x != NULL){
-        print_forwards(x->next);
+        print_path(x->next);
         fprintf(stdout, x->color == 3 ? "%u\n" : "%u ", x->key);
-        // fprintf(stderr, x->color == 3 ? "%u\n" : "%u ", x->key);
     }
 }
 
-static int find_backwards(bst_t* t, struct bst_node* from, struct bst_node* to){
+static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, queue_t* q){
     struct bst_node* u;
-    queue_t* q;
-    int break_loop = 0;
-    
-    u = NULL;
-
-    reset(t->root);
-
-    to->color = GRAY;
-    to->steps = 0;
-    to->dist = 0;
-
-    q = (queue_t*)malloc(sizeof(queue_t));
-    if(q == NULL){
-        return -1;
-    }
-    q->head = 0;
-    q->tail = 0;
-    q->length = t->size;
-    q->q = malloc(sizeof(struct bst_node) * q->length);
-    if(q->q == NULL){
-        return -1;
-    }
-    memset(q->q, 0x0, sizeof(struct bst_node*) * q->length); 
-
-    enqueue(q, to);
-    while(!break_loop && q->head != q->tail){
-        u = dequeue(q);
-        // fprintf(stderr, "%u\n", u->key);
-        if(u == from){
-            break_loop = 1;
-        }
-        find_adj_back(t->root, u, q);
-        u->color = BLACK;
-
-        // print queue
-        // fprintf(stderr, "size: %u\n", q->length);
-        // for(int i=0; i<q->length; i++){
-        //     if(q->q[i] == NULL){
-        //         fprintf(stderr, "NULL ");
-        //     } else {
-        //         fprintf(stderr, "%4d ", q->q[i]->key);
-        //     }
-        // }
-        // fprintf(stderr, "\n-----------------------------------------------------\n");
-    }
-
-    // debug_tree(t);
-
-    if(from->steps == INFTY && from->next==NULL){
-        free(q->q);
-        free(q);
-        return -1;
-    }
-    
-    print_backwards(from);
-
-    free(q->q);
-    free(q);
-
-    return 0;
-}
-
-static int find_forwards(bst_t* t, struct bst_node* from, struct bst_node* to){
-    struct bst_node* u;
-    queue_t* q;
     int break_loop = 0;
     
     u = NULL;
@@ -481,53 +370,43 @@ static int find_forwards(bst_t* t, struct bst_node* from, struct bst_node* to){
     from->color = GRAY;
     from->steps = 0;
 
-    q = malloc(sizeof(queue_t));
     q->head = 0;
     q->tail = 0;
-    q->length = t->size;
-    q->q = malloc(sizeof(struct bst_node) * q->length);
-    memset(q->q, 0x0, sizeof(struct bst_node*) * q->length); 
+    if(q->q == NULL || q->length < t->size){
+        if(q->q != NULL) free(q->q);
+        q->length = t->size;
+        q->q = malloc(sizeof(struct bst_node) * q->length);
+        memset(q->q, 0x0, sizeof(struct bst_node*) * q->length);
+    }
 
     enqueue(q, from);
     while(!break_loop && q->head != q->tail){
         u = dequeue(q);
-        // fprintf(stderr, "%u\n", u->key);
         if(u == to){
             break_loop = 1;
+        } else {
+            for(int i = u->cars.size/ 2; i >= 0; i--){
+                max_heapify(&(u->cars), i);
+            }
+            find_adjacents(t->root, u, q, to->key > from->key);
         }
-        find_adj_fore(t->root, u, q);
         u->color = BLACK;
-        // print queue
-        // fprintf(stderr, "size: %u\n", q->length);
-        // for(int i=0; i<q->length; i++){
-        //     if(q->q[i] == NULL){
-        //         fprintf(stderr, "NULL ");
-        //     } else {
-        //         fprintf(stderr, "%4d ", q->q[i]->key);
-        //     }
-        // }
-        // fprintf(stderr, "\n-----------------------------------------------------\n");
     }
 
     if(to->steps == INFTY){
-        free(q->q);
-        free(q);
         return -1;
     }
     
     to->color = 3;
-    print_forwards(to);
+    print_path(to);
 
-    free(q->q);
-    free(q);
 
     return 0;
 }
 
-static void pianifica_percorso(bst_t* autostrada, int from, int to){
+static void pianifica_percorso(bst_t* autostrada, int from, int to, queue_t* q){
     struct bst_node* start;
     struct bst_node* end;
-    int res;
     
     start = tree_search(autostrada, from);
     end = tree_search(autostrada, to);
@@ -535,19 +414,11 @@ static void pianifica_percorso(bst_t* autostrada, int from, int to){
         fprintf(stdout, "nessun percorso\n");
         return;
     }
+    
    
-    if(to > from){
-        res= find_forwards(autostrada, start, end);
-        if(res!=0){
-            fprintf(stdout, "nessun percorso\n");
-            return;
-        }
-    } else {
-        res = find_forwards(autostrada, start, end);
-        if(res!=0){
-            fprintf(stdout, "nessun percorso\n");
-            return;
-        }
+    if(find_best_path(autostrada, start, end, q) != 0){
+       fprintf(stdout, "nessun percorso\n");
+       return;
     }
 
 }
@@ -555,6 +426,9 @@ static void pianifica_percorso(bst_t* autostrada, int from, int to){
 static void parse_and_execute(bst_t* autostrada){
     char command[MAX_COMMAND + 1];
     int arg1, arg2;
+    queue_t* q;
+    
+    q = malloc(sizeof(queue_t));
 
     while(fscanf(stdin, " %s", command) != EOF){
         switch (command[0]){
@@ -568,7 +442,7 @@ static void parse_and_execute(bst_t* autostrada){
                 break;
             case 'p':
                 if(scanf("%d %d", &arg1, &arg2)){}
-                pianifica_percorso(autostrada, arg1, arg2);
+                pianifica_percorso(autostrada, arg1, arg2, q);
                 break;
             case 'a':
                 if (command[9]=='s'){
@@ -584,28 +458,30 @@ static void parse_and_execute(bst_t* autostrada){
                 break;
         }
     }
+
+    // free(q);
 }
 
-static void debug_tree_util(bst_t* t, struct bst_node* node, int space){
-    if(node == NULL) return;
-
-    space += 5;
-
-    debug_tree_util(t, node->right, space);
-
-    fprintf(stderr, "\n");
-    for(int i=5; i<space; i++)
-        fprintf(stderr, " ");
-    fprintf(stderr, node->color == WHITE ? "%d\n" : "\033[31m%d\033[0m\n", node->key);
-
-    debug_tree_util(t, node->left, space);
-}
-
-static void debug_tree(bst_t* t){
-    fprintf(stderr, "size: %lu\n", t->size);
-    debug_tree_util(t, t->root, 0);
-    fprintf(stderr, "-----------------------------------------------------------------------\n");
-}
+// static void debug_tree_util(bst_t* t, struct bst_node* node, int space){
+//     if(node == NULL) return;
+// 
+//     space += 5;
+// 
+//     debug_tree_util(t, node->right, space);
+// 
+//     fprintf(stderr, "\n");
+//     for(int i=5; i<space; i++)
+//         fprintf(stderr, " ");
+//     fprintf(stderr, node->color == WHITE ? "%d\n" : "\033[31m%d\033[0m\n", node->key);
+// 
+//     debug_tree_util(t, node->left, space);
+// }
+// 
+// static void debug_tree(bst_t* t){
+//     fprintf(stderr, "size: %lu\n", t->size);
+//     debug_tree_util(t, t->root, 0);
+//     fprintf(stderr, "-----------------------------------------------------------------------\n");
+// }
 
 int main(int argc, char** argv) {
     bst_t* autostrada;
@@ -614,11 +490,6 @@ int main(int argc, char** argv) {
 
     parse_and_execute(autostrada);
     
-    // fprintf(stderr, "%d\n", autostrada->root->cars.size);
-    // for(int i=0; i<autostrada->root->cars.size; i++)
-    //     fprintf(stderr, "%d ", autostrada->root->cars.a[i]);
-    // return 0;
-
     // debug_tree(autostrada);
     
     tree_destroy(autostrada);
