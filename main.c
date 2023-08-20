@@ -168,18 +168,18 @@ static struct bst_node* tree_search(bst_t* t, int n){
     return tree_search_util(t->root, n);
 }
 
-static void tree_destroy_util(struct bst_node* x){
-    if(x!=NULL){
-        tree_destroy_util(x->right);
-        tree_destroy_util(x->left);
-        free(x);
-    }
-}
-
-static void tree_destroy(bst_t* t){
-    tree_destroy_util(t->root);
-    free(t);
-}
+// static void tree_destroy_util(struct bst_node* x){
+//     if(x!=NULL){
+//         tree_destroy_util(x->right);
+//         tree_destroy_util(x->left);
+//         free(x);
+//     }
+// }
+// 
+// static void tree_destroy(bst_t* t){
+//     tree_destroy_util(t->root);
+//     free(t);
+// }
 
 static void max_heapify(struct heap* h, int i){
     int l = 2*i;
@@ -346,7 +346,7 @@ static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t*
             x->color = GRAY;
         }
     }
-    if(x->left!=NULL && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key)))
+    if(x->left!=NULL && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key))) /* se sto andando indietro è inutile che vado a controllare nodi più piccoli */
         find_adjacents(x->left, origin, q, dir);
     if(x->right!=NULL && (!dir || (dir && get_max_car(origin) > x->key - origin->key)) && (dir || (!dir && origin->key > x->key)))
         find_adjacents(x->right, origin, q, dir);
@@ -376,8 +376,8 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
         if(q->q != NULL) free(q->q);
         q->length = t->size;
         q->q = malloc(sizeof(struct bst_node) * q->length);
-        memset(q->q, 0x0, sizeof(struct bst_node*) * q->length);
     }
+    memset(q->q, 0x0, sizeof(struct bst_node*) * q->length);
 
     enqueue(q, from);
     while(!break_loop && q->head != q->tail){
@@ -426,9 +426,8 @@ static void pianifica_percorso(bst_t* autostrada, int from, int to, queue_t* q){
 static void parse_and_execute(bst_t* autostrada){
     char command[MAX_COMMAND + 1];
     int arg1, arg2;
-    queue_t* q;
+    queue_t q;
     
-    q = malloc(sizeof(queue_t));
 
     while(fscanf(stdin, " %s", command) != EOF){
         switch (command[0]){
@@ -442,7 +441,7 @@ static void parse_and_execute(bst_t* autostrada){
                 break;
             case 'p':
                 if(scanf("%d %d", &arg1, &arg2)){}
-                pianifica_percorso(autostrada, arg1, arg2, q);
+                pianifica_percorso(autostrada, arg1, arg2, &q);
                 break;
             case 'a':
                 if (command[9]=='s'){
@@ -459,7 +458,6 @@ static void parse_and_execute(bst_t* autostrada){
         }
     }
 
-    // free(q);
 }
 
 // static void debug_tree_util(bst_t* t, struct bst_node* node, int space){
@@ -492,7 +490,7 @@ int main(int argc, char** argv) {
     
     // debug_tree(autostrada);
     
-    tree_destroy(autostrada);
+    // tree_destroy(autostrada);
     
     return 0;
 }
