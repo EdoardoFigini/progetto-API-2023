@@ -12,6 +12,7 @@
 
 struct heap{
     int a[MAX_CARS];
+    int max_heapified;
     size_t size;
 };
 
@@ -80,6 +81,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     z->key = n;
     memset(z->cars.a, NIL, sizeof(int) * MAX_CARS);
     z->cars.size = 0;
+    z->cars.max_heapified = 0;
     z->color = WHITE;
     z->steps = INFTY;
     z->steps = INFTY;
@@ -198,12 +200,18 @@ static void max_heapify(struct heap* h, int i){
     }
 }
 
+static void build_max_heap(struct heap* h){
+    for(int i=h->size / 2; i>=0; i--){
+        max_heapify(h, i);
+    }
+
+    h->max_heapified = 1;
+}
+
 static void heap_insert(struct heap* h, int k){
     h->a[(h->size)++] = k;
-    // for(int i = (h->size)/ 2; i>=0; i--){
-    //     max_heapify(h, i);
-    // }
-
+    h->max_heapified = 0;
+    // build_max_heap(h);
 }
 
 static int heap_delete(struct heap* h, int k){
@@ -216,13 +224,10 @@ static int heap_delete(struct heap* h, int k){
     h->a[i] = h->a[h->size - 1];
     h->a[h->size - 1] = NIL;
     (h->size)--;
+    h->max_heapified = 0;
 
-    // for(i = (h->size)/2; i>=0; i--){
-    //     max_heapify(h, i);
-    // }
+    // build_max_heap(h);
     
-
-
     return 0;
 } 
 
@@ -271,10 +276,8 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
         if(scanf(" %d", &n)){};
         s->cars.a[(s->cars.size)++] = n;
     }
-    // for(int i = s->cars.size/ 2; i >= 0; i--){
-    //     max_heapify(&(s->cars), i);
-    // }
 
+    // build_max_heap(h);
 
     fprintf(stdout, "aggiunta\n");
 }
@@ -372,7 +375,7 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
 
     q->head = 0;
     q->tail = 0;
-    if(q->q == NULL || q->length < t->size){
+    if(q->length < t->size){
         if(q->q != NULL) free(q->q);
         q->length = t->size;
         q->q = malloc(sizeof(struct bst_node) * q->length);
@@ -385,8 +388,8 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
         if(u == to){
             break_loop = 1;
         } else {
-            for(int i = u->cars.size/ 2; i >= 0; i--){
-                max_heapify(&(u->cars), i);
+            if(!u->cars.max_heapified){
+                build_max_heap(&(u->cars));
             }
             find_adjacents(t->root, u, q, to->key > from->key);
         }
@@ -428,6 +431,8 @@ static void parse_and_execute(bst_t* autostrada){
     int arg1, arg2;
     queue_t q;
     
+    q.length = 0;
+    q.q = NULL;
 
     while(fscanf(stdin, " %s", command) != EOF){
         switch (command[0]){
@@ -457,6 +462,9 @@ static void parse_and_execute(bst_t* autostrada){
                 break;
         }
     }
+
+    // if(q.q != NULL)
+    //     free(q.q);
 
 }
 
