@@ -273,7 +273,7 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     }
 
     for(int i=0; i<num; i++){
-        if(scanf(" %d", &n)){};
+        if(fscanf(stdin, " %d", &n)){};
         s->cars.a[(s->cars.size)++] = n;
     }
 
@@ -349,7 +349,7 @@ static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t*
             x->color = GRAY;
         }
     }
-    if(x->left!=NULL && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key))) /* se sto andando indietro è inutile che vado a controllare nodi più piccoli */
+    if(x->left!=NULL && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key))) 
         find_adjacents(x->left, origin, q, dir);
     if(x->right!=NULL && (!dir || (dir && get_max_car(origin) > x->key - origin->key)) && (dir || (!dir && origin->key > x->key)))
         find_adjacents(x->right, origin, q, dir);
@@ -437,24 +437,24 @@ static void parse_and_execute(bst_t* autostrada){
     while(fscanf(stdin, " %s", command) != EOF){
         switch (command[0]){
             case 'd':                
-                if(scanf("%d", &arg1)){}
+                if(fscanf(stdin, "%d", &arg1)){}
                 demolisci_stazione(autostrada, arg1);
                 break;
             case 'r':
-                if(scanf("%d %d", &arg1, &arg2)){}
+                if(fscanf(stdin, "%d %d", &arg1, &arg2)){}
                 rottama_auto(autostrada, arg1, arg2);
                 break;
             case 'p':
-                if(scanf("%d %d", &arg1, &arg2)){}
+                if(fscanf(stdin, "%d %d", &arg1, &arg2)){}
                 pianifica_percorso(autostrada, arg1, arg2, &q);
                 break;
             case 'a':
                 if (command[9]=='s'){
-                    if(scanf("%d %d", &arg1, &arg2)){}
+                    if(fscanf(stdin, "%d %d", &arg1, &arg2)){}
                     aggiungi_stazione(autostrada, arg1, arg2);
 
                 } else {
-                    if(scanf("%d %d", &arg1, &arg2)){}
+                    if(fscanf(stdin, "%d %d", &arg1, &arg2)){}
                     aggiungi_auto(autostrada, arg1, arg2);
                 }
                 break;
