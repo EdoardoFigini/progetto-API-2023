@@ -33,6 +33,7 @@ typedef struct{
     struct bst_node* root;
     struct bst_node* nil;
     size_t size;
+    unsigned short int modified;
 } bst_t;
 
 typedef struct queue {
@@ -55,7 +56,8 @@ static bst_t* init_tree(){
     t->nil->left = NULL;
     t->nil->right = NULL;
     t->nil->rb = BLACK;
-    
+
+    t->modified = 1;    
 
     return t;
 }
@@ -315,6 +317,7 @@ static void tree_delete(bst_t* t, struct bst_node* z){
         rb_delete_fixup(t, x);
     }
 
+
     free(y);
 }
 
@@ -355,8 +358,8 @@ static void max_heapify(struct heap* h, int i){
     int max = NIL;
     int tmp = NIL;
 
-    // (l <= h->size && h->a[l] > h->a[i]) ? (max = l) : (max = i);
-    max = (l <= h->size && h->a[l] > h->a[i]) * l + !(l <= h->size && h->a[l] > h->a[i]) * i;
+    (l <= h->size && h->a[l] > h->a[i]) ? (max = l) : (max = i);
+    // max = (l <= h->size && h->a[l] > h->a[i]) * l + !(l <= h->size && h->a[l] > h->a[i]) * i;
     if(r <= h->size && h->a[r] > h->a[max])
         max = r;
     if(max != i){
@@ -423,7 +426,7 @@ static struct bst_node* dequeue(queue_t* queue){
     //     queue->head = 0;
     // else
     //     queue->head = queue->head + 1;
-    queue->head = (queue->head != queue->length) * queue->head + 1;
+    queue->head = (queue->head != queue->length) * (queue->head + 1);
     return x;
 }
 
@@ -447,7 +450,8 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
     }
 
     // build_max_heap(h);
-
+    
+    
     fprintf(stdout, "aggiunta\n");
 }
 
@@ -461,6 +465,7 @@ static void aggiungi_auto(bst_t* autostrada, int stazione, int autonomia){
 
     heap_insert(&(s->cars), autonomia);
 
+    
     fprintf(stdout, "aggiunta\n");
 }
 
@@ -475,6 +480,7 @@ static void demolisci_stazione(bst_t* autostrada, int stazione){
     
     tree_delete(autostrada, s);
 
+    
     fprintf(stdout, "demolita\n");
 }
 
@@ -492,6 +498,7 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         return;
     }
     
+        
     fprintf(stdout, "rottamata\n");
 }
 
@@ -501,12 +508,13 @@ static void reset(struct bst_node* x, struct bst_node* nil){
         x->steps = INFTY;
         x->next = NULL;
         reset(x->right, nil);
-        reset(x->left, nil);
+        reset(x->left,  nil);
     }
 }
 
 static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t* q, int dir, struct bst_node* nil){
-    if((x != origin && (x->key > origin->key) == dir && get_max_car(origin) >= abs(x->key - origin->key)) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
+    int dist = x->key - origin->key;
+    if((x != origin && dist > 0 == dir && get_max_car(origin) >= abs(dist)) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
         x->steps = origin->steps + 1;
         if(x->color == WHITE){
             enqueue(q, x);
@@ -514,12 +522,11 @@ static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t*
         if(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)){
             x->next = origin;
         }
-        // x->next = (struct bst_node*)((unsigned long int)origin * (x->next==NULL || (x->next!=NULL && origin->key < x->next->key)) + (unsigned long int)x->next * !(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)));
         x->color = GRAY;
     }
-    if(x->left!=nil && (dir || (!dir && get_max_car(origin) > origin->key - x->key)) && (!dir || (dir && origin->key < x->key))) 
+    if(x->left!=nil && (!dir || (dir && dist > 0)) && (dir || (!dir && get_max_car(origin) > -dist))) 
         find_adjacents(x->left, origin, q, dir, nil);
-    if(x->right!=nil && (!dir || (dir && get_max_car(origin) > x->key - origin->key)) && (dir || (!dir && origin->key > x->key)))
+    if(x->right!=nil  && (dir || (!dir && dist < 0)) && (!dir || (dir && get_max_car(origin) > dist)))
         find_adjacents(x->right, origin, q, dir, nil);
 }
 
@@ -536,7 +543,7 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
     int dir;
     
     u = NULL;
-
+    
     reset(t->root, t->nil);
 
     from->color = GRAY;
@@ -545,9 +552,9 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
     q->head = 0;
     q->tail = 0;
     if(q->length < t->size){
-        if(q->q != NULL) free(q->q);
+        // if(q->q != NULL) free(q->q);
         q->length = t->size;
-        q->q = malloc(sizeof(struct bst_node) * q->length);
+        q->q = realloc(q->q, sizeof(struct bst_node) * q->length);
     }
     memset(q->q, 0x0, sizeof(struct bst_node*) * q->length);
 
@@ -573,13 +580,13 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
         u->color = BLACK;
     }
 
+    
     if(to->steps == INFTY){
         return -1;
     }
     
     to->color = 3;
     print_path(to);
-
 
     return 0;
 }
