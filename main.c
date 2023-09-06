@@ -47,7 +47,7 @@ static bst_t* init_tree(){
     bst_t* t;
 
     t=(bst_t*)malloc(sizeof(bst_t));
-    t->nil = malloc(sizeof(struct bst_node));
+    t->nil = (struct bst_node*)malloc(sizeof(struct bst_node));
     t->root = t->nil;
     t->nil->parent = t->root;
     t->nil->key = NIL;
@@ -514,7 +514,7 @@ static void reset(struct bst_node* x, struct bst_node* nil){
 
 static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t* q, int dir, struct bst_node* nil){
     int dist = x->key - origin->key;
-    if((x != origin && dist > 0 == dir && get_max_car(origin) >= abs(dist)) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
+    if((x != origin && (dist > 0) == dir && get_max_car(origin) >= abs(dist)) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
         x->steps = origin->steps + 1;
         if(x->color == WHITE){
             enqueue(q, x);
