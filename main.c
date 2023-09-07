@@ -13,40 +13,36 @@
 
 struct heap{
     int a[MAX_CARS];
-    int max_heapified;
+    unsigned char max_heapified;
     size_t size;
 };
 
 struct bst_node{
-    int key;
+    unsigned int key;
     struct heap cars;
     struct bst_node* parent;
     struct bst_node* left;
     struct bst_node* right;
-    struct bst_node* next;
+    struct bst_node* prev;
     unsigned int steps;
-    unsigned short int color;
-    unsigned short int rb;
+    unsigned char color;
+    unsigned char rb;
 };
 
 typedef struct{
     struct bst_node* root;
     struct bst_node* nil;
     size_t size;
-    unsigned short int modified;
 } bst_t;
 
 typedef struct queue {
     struct bst_node** q;
-    int tail;
-    int head;
+    unsigned short int tail;
+    unsigned short int head;
     size_t length;
 } queue_t;
 
-static bst_t* init_tree(){
-    bst_t* t;
-
-    t=(bst_t*)malloc(sizeof(bst_t));
+static void init_tree(bst_t* t){
     t->nil = (struct bst_node*)malloc(sizeof(struct bst_node));
     t->root = t->nil;
     t->nil->parent = t->root;
@@ -57,14 +53,11 @@ static bst_t* init_tree(){
     t->nil->right = NULL;
     t->nil->rb = BLACK;
 
-    t->modified = 1;    
-
-    return t;
+    t->size = 0;
 }
 
 static void left_rotate(bst_t* t, struct bst_node* x){
     struct bst_node* y;
-
 
     y = x->right;
     x->right = y->left;
@@ -84,7 +77,6 @@ static void left_rotate(bst_t* t, struct bst_node* x){
 static void right_rotate(bst_t* t, struct bst_node* x){
     struct bst_node* y;
 
-    
     y = x->left;
     x->left = y->right;
     if(y->right != t->nil)
@@ -121,10 +113,9 @@ static struct bst_node* tree_successor(bst_t* t, struct bst_node* x){
     return y;
 }
 
-static int rb_insert_fixup(bst_t* t, struct bst_node* z){
+static void rb_insert_fixup(bst_t* t, struct bst_node* z){
     struct bst_node *x;
     struct bst_node *y;
-
 
     if(z == t->root)
         t->root->rb = BLACK;
@@ -168,8 +159,6 @@ static int rb_insert_fixup(bst_t* t, struct bst_node* z){
             }
         }
     }
-
-    return 0;
 }
 
 static void rb_delete_fixup(bst_t* t, struct bst_node* x){
@@ -242,7 +231,7 @@ static struct bst_node* tree_insert(bst_t* t, int n){
     z->color = WHITE;
     z->steps = INFTY;
     z->steps = INFTY;
-    z->next = NULL;
+    z->prev = NULL;
 
     y = t->nil;
     x = t->root;
@@ -331,14 +320,16 @@ static struct bst_node* tree_search_util(struct bst_node* x, int n, struct bst_n
     // } else {
     //     return tree_search_util(x->right, n, nil);
     // }
+    
+    // return (n < x->key) ? tree_search_util(x->left, n, nil) : tree_search_util(x->right, n, nil);
 
     return tree_search_util((struct bst_node*)((unsigned long int)(x->right) * (n >= x->key) + (unsigned long int)(x->left) * (n < x->key)), n, nil);
 }
 
-static struct bst_node* tree_search(bst_t* t, int n){
-    return tree_search_util(t->root, n, t->nil);
-}
-
+// static struct bst_node* tree_search(bst_t* t, int n){
+//     return tree_search_util(t->root, n, t->nil);
+// }
+// 
 // static void tree_destroy_util(struct bst_node* x){
 //     if(x!=NULL){
 //         tree_destroy_util(x->right);
@@ -349,7 +340,6 @@ static struct bst_node* tree_search(bst_t* t, int n){
 // 
 // static void tree_destroy(bst_t* t){
 //     tree_destroy_util(t->root);
-//     free(t);
 // }
 
 static void max_heapify(struct heap* h, int i){
@@ -407,11 +397,8 @@ static void enqueue(queue_t* queue, struct bst_node* x){
     }
 
     queue->q[queue->tail] = x;
-    // if(queue->tail == queue->length)
-    //     queue->tail = 0;
-    // else
-    //     queue->tail = queue->tail + 1;
-    queue->tail = (queue->tail != queue->length) * queue->tail + 1;
+
+    queue->tail = (queue->tail != queue->length) * (queue->tail + 1);
 }
 
 static struct bst_node* dequeue(queue_t* queue){
@@ -422,10 +409,7 @@ static struct bst_node* dequeue(queue_t* queue){
     
     x = queue->q[queue->head];
     queue->q[queue->head] = NULL;
-    // if(queue->head == queue->length)
-    //     queue->head = 0;
-    // else
-    //     queue->head = queue->head + 1;
+
     queue->head = (queue->head != queue->length) * (queue->head + 1);
     return x;
 }
@@ -446,11 +430,11 @@ static void aggiungi_stazione(bst_t* autostrada, int dist, int num){
 
     for(int i=0; i<num; i++){
         if(fscanf(stdin, " %d", &n)){};
-        s->cars.a[(s->cars.size)++] = n;
+        // s->cars.a[(s->cars.size)++] = n;
+        heap_insert(&(s->cars), n);
     }
 
     // build_max_heap(h);
-    
     
     fprintf(stdout, "aggiunta\n");
 }
@@ -465,7 +449,6 @@ static void aggiungi_auto(bst_t* autostrada, int stazione, int autonomia){
 
     heap_insert(&(s->cars), autonomia);
 
-    
     fprintf(stdout, "aggiunta\n");
 }
 
@@ -479,7 +462,6 @@ static void demolisci_stazione(bst_t* autostrada, int stazione){
     }
     
     tree_delete(autostrada, s);
-
     
     fprintf(stdout, "demolita\n");
 }
@@ -497,50 +479,64 @@ static void rottama_auto(bst_t* autostrada, int stazione, int autonomia){
         fprintf(stdout, "non rottamata\n");
         return;
     }
-    
         
     fprintf(stdout, "rottamata\n");
 }
 
 static void reset(struct bst_node* x, struct bst_node* nil){
-    if(x != nil){
-        x->color = WHITE;
-        x->steps = INFTY;
-        x->next = NULL;
-        reset(x->right, nil);
-        reset(x->left,  nil);
-    }
+    if(x == nil) return;
+    x->color = WHITE;
+    x->steps = INFTY;
+    x->prev = NULL;
+    reset(x->right, nil);
+    reset(x->left,  nil);
 }
 
-static void find_adjacents(struct bst_node* x, struct bst_node* origin, queue_t* q, int dir, struct bst_node* nil){
+static void find_adjacents_f(struct bst_node* x, struct bst_node* origin, queue_t* q, struct bst_node* nil){
     int dist = x->key - origin->key;
-    if((x != origin && (dist > 0) == dir && get_max_car(origin) >= abs(dist)) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
+    if((x != origin && (dist > 0) && get_max_car(origin) >= dist) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
         x->steps = origin->steps + 1;
         if(x->color == WHITE){
             enqueue(q, x);
         }
-        if(x->next==NULL || (x->next!=NULL && origin->key < x->next->key)){
-            x->next = origin;
+        if(x->prev==NULL || (x->prev!=NULL && origin->key < x->prev->key)){
+            x->prev = origin;
         }
         x->color = GRAY;
     }
-    if(x->left!=nil && (!dir || (dir && dist > 0)) && (dir || (!dir && get_max_car(origin) > -dist))) 
-        find_adjacents(x->left, origin, q, dir, nil);
-    if(x->right!=nil  && (dir || (!dir && dist < 0)) && (!dir || (dir && get_max_car(origin) > dist)))
-        find_adjacents(x->right, origin, q, dir, nil);
+    if(x->left!=nil && dist > 0) 
+        find_adjacents_f(x->left, origin, q, nil);
+    if(x->right!=nil && get_max_car(origin) > dist)
+        find_adjacents_f(x->right, origin, q, nil);
+}
+
+static void find_adjacents_b(struct bst_node* x, struct bst_node* origin, queue_t* q, struct bst_node* nil){
+    int dist = origin->key - x->key;
+    if((x != origin && (dist > 0) && get_max_car(origin) >= dist) && ((unsigned int)x->steps > (unsigned int)(origin->steps))){
+        x->steps = origin->steps + 1;
+        if(x->color == WHITE){
+            enqueue(q, x);
+        }
+        if(x->prev==NULL || (x->prev!=NULL && origin->key < x->prev->key)){
+            x->prev = origin;
+        }
+        x->color = GRAY;
+    }
+    if(x->left!=nil && get_max_car(origin) > dist)
+        find_adjacents_b(x->left, origin, q, nil);
+    if(x->right!=nil && dist > 0)
+        find_adjacents_b(x->right, origin, q, nil);
 }
 
 static void print_path(struct bst_node* x){
-    if(x != NULL){
-        print_path(x->next);
-        fprintf(stdout, x->color == 3 ? "%u\n" : "%u ", x->key);
-    }
+    if(x == NULL) return;
+    print_path(x->prev);
+    fprintf(stdout, x->color == 3 ? "%u\n" : "%u ", x->key);
 }
 
 static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, queue_t* q){
     struct bst_node* u;
     int break_loop = 0;
-    int dir;
     
     u = NULL;
     
@@ -552,7 +548,6 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
     q->head = 0;
     q->tail = 0;
     if(q->length < t->size){
-        // if(q->q != NULL) free(q->q);
         q->length = t->size;
         q->q = realloc(q->q, sizeof(struct bst_node) * q->length);
     }
@@ -562,24 +557,15 @@ static int find_best_path(bst_t* t, struct bst_node* from, struct bst_node* to, 
     while(!break_loop && q->head != q->tail){
         u = dequeue(q);
         if(u == to){
-            break_loop = 1;
+            break_loop++;
         } else {
             if(!u->cars.max_heapified){
                 build_max_heap(&(u->cars));
             }
-            dir = to->key > from->key;
-            // if(t->root->key < u->key && dir){
-            //     find_adjacents(t->root->right, u, q, dir, t->nil);
-            // } else if (t->root->key > u->key && !dir){
-            //     find_adjacents(t->root->left, u, q, dir, t->nil);
-            // } else {
-            //     find_adjacents(t->root, u, q, dir, t->nil);
-            // }
-            find_adjacents(t->root, u, q, dir, t->nil);
+            to->key > from->key ? find_adjacents_f(t->root, u, q, t->nil) : find_adjacents_b(t->root, u, q, t->nil);
         }
         u->color = BLACK;
     }
-
     
     if(to->steps == INFTY){
         return -1;
@@ -653,13 +639,13 @@ static void parse_and_execute(bst_t* autostrada){
 }
 
 int main(int argc, char** argv) {
-    bst_t* autostrada;
+    bst_t autostrada;
 
-    autostrada = init_tree();
+    init_tree(&autostrada);
 
-    parse_and_execute(autostrada);
+    parse_and_execute(&autostrada);
     
-    // tree_destroy(autostrada);
+    // tree_destroy(&autostrada);
     
     return 0;
 }
