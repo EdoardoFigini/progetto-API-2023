@@ -326,10 +326,10 @@ static struct bst_node* tree_search_util(struct bst_node* x, int n, struct bst_n
     return tree_search_util((struct bst_node*)((unsigned long int)(x->right) * (n >= x->key) + (unsigned long int)(x->left) * (n < x->key)), n, nil);
 }
 
-// static struct bst_node* tree_search(bst_t* t, int n){
-//     return tree_search_util(t->root, n, t->nil);
-// }
-// 
+static struct bst_node* tree_search(bst_t* t, int n){
+    return tree_search_util(t->root, n, t->nil);
+}
+
 // static void tree_destroy_util(struct bst_node* x){
 //     if(x!=NULL){
 //         tree_destroy_util(x->right);
